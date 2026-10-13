@@ -100,7 +100,7 @@ const testMonitors = `[
     "name": "CPU usage is high on {{host.name}}",
     "message": "{{#is_alert}}CPU usage is above {{threshold}} on {{host.name}}{{/is_alert}}{{#is_warning}}CPU usage is above {{warn_threshold}} on {{host.name}}{{/is_warning}}{{#is_no_data}}No data from {{host.name}}{{/is_no_data}} @slack-ops",
     "query": "avg(last_5m):avg:system.cpu.user{*} by {env,host} > 90",
-    "options": {"thresholds": {"critical": 90, "warning": 80}},
+    "options": {"thresholds": {"critical": 90, "warning": 80}, "notify_no_data": true},
     "type": "metric alert",
     "overall_state": "Alert",
     "priority": 2,
@@ -125,6 +125,7 @@ const testMonitors = `[
     "message": "",
     "query": "avg(last_5m):avg:system.disk.in_use{*} > 0.9",
     "overall_state": "Alert",
+    "overall_state_modified": "2023-11-14T22:13:20+00:00",
     "priority": null,
     "tags": [],
     "state": {"groups": {}},
@@ -156,6 +157,32 @@ const testMonitors = `[
     "matching_downtimes": [
       {"id": 300, "start": 1690000000, "scope": ["*"]}
     ]
+  },
+  {
+    "id": 6,
+    "name": "Queue is stuck",
+    "query": "logs(\"service:queue\").index(\"*\").rollup(\"count\").last(\"10m\") < 1",
+    "options": {"on_missing_data": "show_and_notify_no_data"},
+    "overall_state": "No Data",
+    "overall_state_modified": "not a date",
+    "state": {"groups": {}}
+  },
+  {
+    "id": 7,
+    "name": "Error rate is high",
+    "query": "sum(last_10m):sum:trace.http.request.errors{*} by {service}.as_count() > 5",
+    "options": {"on_missing_data": "show_no_data"},
+    "overall_state": "No Data",
+    "state": {"groups": {"service:api": {"name": "service:api", "status": "No Data", "last_nodata_ts": 1700000600}}}
+  },
+  {
+    "id": 8,
+    "name": "API has no traffic",
+    "query": "sum(last_10m):sum:trace.http.request.hits{*}.as_count() < 1",
+    "options": {"notify_no_data": false},
+    "overall_state": "No Data",
+    "overall_state_modified": "2023-11-14T22:13:20+00:00",
+    "state": {"groups": {}}
   }
 ]`
 
@@ -228,7 +255,7 @@ func TestMapMonitors(t *testing.T) {
 			Receiver: "datadog",
 			Alerts: []testAlert{
 				{
-					StartsAt:     now,
+					StartsAt:     time.Unix(1700000000, 0).UTC(),
 					Labels:       map[string]string{"alertname": "Disk is full", "monitor_id": "2", "severity": "critical"},
 					Annotations:  map[string]string{"query": "avg(last_5m):avg:system.disk.in_use{*} > 0.9"},
 					Fingerprint:  fingerprint("2/"),
@@ -268,6 +295,21 @@ func TestMapMonitors(t *testing.T) {
 					Receiver:     "datadog",
 					SilencedBy:   []string{"300"},
 					State:        models.AlertStateSuppressed,
+				},
+			},
+		},
+		{
+			Labels:   map[string]string{"alertname": "Queue is stuck", "monitor_id": "6"},
+			Receiver: "datadog",
+			Alerts: []testAlert{
+				{
+					StartsAt:     now,
+					Labels:       map[string]string{"alertname": "Queue is stuck", "monitor_id": "6", "severity": "nodata"},
+					Annotations:  map[string]string{"query": `logs("service:queue").index("*").rollup("count").last("10m") < 1`},
+					Fingerprint:  fingerprint("6/"),
+					GeneratorURL: "https://app.datadoghq.com/monitors/6",
+					Receiver:     "datadog",
+					State:        models.AlertStateActive,
 				},
 			},
 		},

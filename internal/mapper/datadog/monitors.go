@@ -27,7 +27,8 @@ const (
 
 // monitor group states that are mapped to alerts, with the value of the
 // severity label set on those alerts, other states (OK, Ignored, Skipped and
-// Unknown) are not alerting
+// Unknown) are not alerting. No Data is only alerting for some monitors, see
+// isAlerting.
 var severities = map[string]string{
 	statusAlert:  "critical",
 	statusWarn:   "warning",
@@ -55,20 +56,23 @@ type downtime struct {
 }
 
 type monitorOptions struct {
-	Thresholds map[string]jsontext.Value `json:"thresholds"`
+	Thresholds    map[string]jsontext.Value `json:"thresholds"`
+	OnMissingData string                    `json:"on_missing_data"`
+	NotifyNoData  bool                      `json:"notify_no_data"`
 }
 
 type monitor struct {
-	State             monitorState   `json:"state"`
-	Options           monitorOptions `json:"options"`
-	Priority          *int64         `json:"priority"`
-	Name              string         `json:"name"`
-	Message           string         `json:"message"`
-	Query             string         `json:"query"`
-	OverallState      string         `json:"overall_state"`
-	Tags              []string       `json:"tags"`
-	MatchingDowntimes []downtime     `json:"matching_downtimes"`
-	ID                int64          `json:"id"`
+	State                monitorState   `json:"state"`
+	Options              monitorOptions `json:"options"`
+	Priority             *int64         `json:"priority"`
+	Name                 string         `json:"name"`
+	Message              string         `json:"message"`
+	Query                string         `json:"query"`
+	OverallState         string         `json:"overall_state"`
+	OverallStateModified string         `json:"overall_state_modified"`
+	Tags                 []string       `json:"tags"`
+	MatchingDowntimes    []downtime     `json:"matching_downtimes"`
+	ID                   int64          `json:"id"`
 }
 
 // mutingDowntime is a downtime muting at least one alert, with IDs of all
@@ -114,8 +118,8 @@ func (m *monitor) alerts(webURI string, now time.Time, muting map[int64]*mutingD
 	// monitors that are not broken down into groups might not report any
 	// group, use the overall state for those
 	if len(m.State.Groups) == 0 {
-		if _, ok := severities[m.OverallState]; ok {
-			return models.AlertList{m.alert("", monitorGroup{Status: m.OverallState}, webURI, now, muting)}
+		if m.isAlerting(m.OverallState) {
+			return models.AlertList{m.alert("", m.overallGroup(), webURI, now, muting)}
 		}
 		return nil
 	}
@@ -123,11 +127,36 @@ func (m *monitor) alerts(webURI string, now time.Time, muting map[int64]*mutingD
 	alerts := models.AlertList{}
 	for _, name := range slices.Sorted(maps.Keys(m.State.Groups)) {
 		group := m.State.Groups[name]
-		if _, ok := severities[group.Status]; ok {
+		if m.isAlerting(group.Status) {
 			alerts = append(alerts, m.alert(name, group, webURI, now, muting))
 		}
 	}
 	return alerts
+}
+
+// isAlerting returns true if monitor groups in given state are mapped to
+// alerts. Groups without data are only alerting if the monitor sends
+// notifications when data is missing, otherwise Datadog doesn't notify anyone
+// about them, which happens for example with metrics that are only reported
+// when there are errors.
+func (m *monitor) isAlerting(status string) bool {
+	if status == statusNoData {
+		return m.Options.NotifyNoData || m.Options.OnMissingData == "show_and_notify_no_data"
+	}
+	_, ok := severities[status]
+	return ok
+}
+
+// overallGroup returns the state of a monitor that doesn't report any group,
+// from its overall state and the time it was last modified, which is an
+// RFC 3339 date like 2026-09-24T11:11:46+00:00
+func (m *monitor) overallGroup() monitorGroup {
+	group := monitorGroup{Status: m.OverallState}
+	if modified, err := time.Parse(time.RFC3339, m.OverallStateModified); err == nil {
+		group.LastTriggeredTs = modified.Unix()
+		group.LastNodataTs = group.LastTriggeredTs
+	}
+	return group
 }
 
 func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now time.Time, muting map[int64]*mutingDowntime) models.Alert {

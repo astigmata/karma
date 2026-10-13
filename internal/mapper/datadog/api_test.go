@@ -46,8 +46,8 @@ func TestCollect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
-	if len(groups) != 4 {
-		t.Errorf("Expected 4 alert groups, got %d", len(groups))
+	if len(groups) != 5 {
+		t.Errorf("Expected 5 alert groups, got %d", len(groups))
 	}
 	// only check downtimes that never end, others depend on the current time
 	ids := map[string]bool{}

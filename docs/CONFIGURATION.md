@@ -501,8 +501,12 @@ alertmanager:
   `https://api.datadoghq.eu` becomes `https://app.datadoghq.eu`.
 - Datadog servers are always read-only, enabling `proxy` is an error.
 
-Every monitor group in `Alert`, `Warn` or `No Data` state is shown as an alert,
-alerts are grouped by monitor and have:
+Every monitor group in `Alert` or `Warn` state is shown as an alert. Groups in
+`No Data` state are only shown for monitors notifying when data is missing
+(`notify_no_data` or `on_missing_data: show_and_notify_no_data`), like Datadog
+notifications. Alerts start when their group last triggered or, for monitors
+that don't report any group, when the monitor state last changed. Alerts are
+grouped by monitor and have:
 
 - `alertname` label set to the monitor name
 - `monitor_id` label set to the monitor ID
