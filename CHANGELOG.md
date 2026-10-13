@@ -7,6 +7,10 @@
 - Alerts can be collected from Datadog monitors by setting `type: datadog` on
   an Alertmanager server, see [docs](/docs/CONFIGURATION.md#datadog-monitors).
 
+### Changed
+
+- Line breaks in annotation values are now kept when rendered in the UI.
+
 ## v0.133
 
 ### Changed

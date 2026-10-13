@@ -39,7 +39,9 @@ exports[`<GroupFooter /> matches snapshot 1`] = `
           <span
             class="Linkify"
           >
-            <span>
+            <span
+              class="components-grid-annotation-value"
+            >
               This is summary
             </span>
           </span>
@@ -189,7 +191,9 @@ exports[`<GroupFooter /> matches snapshot when silence is rendered 1`] = `
           <span
             class="Linkify"
           >
-            <span>
+            <span
+              class="components-grid-annotation-value"
+            >
               This is summary
             </span>
           </span>

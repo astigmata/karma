@@ -64,7 +64,9 @@ const RenderNonLinkAnnotation: FC<{
                   dangerouslySetInnerHTML={{ __html: value }}
                 ></span>
               ) : (
-                <span ref={ref}>{value}</span>
+                <span ref={ref} className="components-grid-annotation-value">
+                  {value}
+                </span>
               )}
             </Linkify>
           </>

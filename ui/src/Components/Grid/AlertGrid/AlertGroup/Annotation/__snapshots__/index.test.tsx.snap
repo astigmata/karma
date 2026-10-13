@@ -86,7 +86,9 @@ exports[`<RenderNonLinkAnnotation /> matches snapshot when visible=true 1`] = `
       <span
         class="Linkify"
       >
-        <span>
+        <span
+          class="components-grid-annotation-value"
+        >
           some long text
         </span>
       </span>

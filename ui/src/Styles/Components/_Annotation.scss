@@ -3,6 +3,11 @@
   color: var(--bs-body-color);
 }
 
+// keep line breaks of multi-line annotation values
+.components-grid-annotation-value {
+  white-space: pre-line;
+}
+
 .components-grid-annotation-link {
   text-decoration: none;
   color: var(--karma-link-color);

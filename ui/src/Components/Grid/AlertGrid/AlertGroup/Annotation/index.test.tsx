@@ -72,6 +72,36 @@ describe("<RenderNonLinkAnnotation />", () => {
     expect(container.innerHTML).not.toMatch(/some long text/);
   });
 
+  it("keeps line breaks of plain text values", () => {
+    const { container } = render(
+      <RenderNonLinkAnnotation
+        name="foo"
+        value={"line 1\nline 2"}
+        visible={true}
+        allowHTML={false}
+        afterUpdate={MockAfterUpdate}
+      />,
+    );
+    const value = container.querySelector(".components-grid-annotation-value");
+    expect(value?.textContent).toBe("line 1\nline 2");
+  });
+
+  it("doesn't change HTML values", () => {
+    const { container } = render(
+      <RenderNonLinkAnnotation
+        name="foo"
+        value="<b>bold</b>"
+        visible={true}
+        allowHTML={true}
+        afterUpdate={MockAfterUpdate}
+      />,
+    );
+    expect(
+      container.querySelector(".components-grid-annotation-value"),
+    ).toBeNull();
+    expect(container.querySelector("b")?.textContent).toBe("bold");
+  });
+
   it("links inside annotation are rendered as a.href", () => {
     const { container } = renderNonLinkAnnotationContainingLink(true);
     const link = container.querySelector("a[href='http://example.com']");

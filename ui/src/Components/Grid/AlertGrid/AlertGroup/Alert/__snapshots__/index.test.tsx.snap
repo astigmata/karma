@@ -37,7 +37,9 @@ exports[`<Alert /> matches snapshot when inhibited 1`] = `
           <span
             class="Linkify"
           >
-            <span>
+            <span
+              class="components-grid-annotation-value"
+            >
               some long text
             </span>
           </span>
@@ -207,7 +209,9 @@ exports[`<Alert /> matches snapshot with showAlertmanagers=false showReceiver=fa
           <span
             class="Linkify"
           >
-            <span>
+            <span
+              class="components-grid-annotation-value"
+            >
               some long text
             </span>
           </span>
