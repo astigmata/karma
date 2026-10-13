@@ -57,6 +57,7 @@ func (am *AlertmanagerInstance) marshalTo(w *jsonWriter) {
 type AlertmanagerAPIStatus struct {
 	Headers         map[string]string `json:"headers"`
 	Name            string            `json:"name"`
+	Type            string            `json:"type"`
 	URI             string            `json:"uri"`
 	PublicURI       string            `json:"publicURI"`
 	CORSCredentials string            `json:"corsCredentials"`
@@ -79,6 +80,8 @@ func (s *AlertmanagerAPIStatus) marshalTo(w *jsonWriter) {
 	w.mapStringString(s.Headers)
 	w.key("name")
 	w.str(s.Name)
+	w.key("type")
+	w.str(s.Type)
 	w.key("uri")
 	w.str(s.URI)
 	w.key("publicURI")

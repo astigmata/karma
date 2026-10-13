@@ -125,7 +125,11 @@ const SilenceDetails: FC<{
                 <RenderLinkAnnotation
                   key={alertmanager.name}
                   name={alertmanager.name}
-                  value={`${alertmanager.publicURI}/#/silences/${silence.id}`}
+                  value={
+                    alertmanager.type === "datadog"
+                      ? `${alertmanager.publicURI}/monitors/downtimes?id=${silence.id}`
+                      : `${alertmanager.publicURI}/#/silences/${silence.id}`
+                  }
                 />
               ))}
             </div>

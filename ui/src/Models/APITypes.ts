@@ -115,6 +115,7 @@ export interface APIGridT {
 
 export interface APIAlertmanagerUpstreamT {
   name: string;
+  type?: "alertmanager" | "datadog";
   cluster: string;
   uri: string;
   publicURI: string;

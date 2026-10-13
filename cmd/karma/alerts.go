@@ -94,6 +94,7 @@ func getUpstreams() models.AlertmanagerAPISummary {
 
 		u := models.AlertmanagerAPIStatus{
 			Name:            upstream.Name,
+			Type:            upstream.Type,
 			URI:             upstream.InternalURI(),
 			PublicURI:       upstream.PublicURI(),
 			ReadOnly:        upstream.ReadOnly,
@@ -104,7 +105,9 @@ func getUpstreams() models.AlertmanagerAPISummary {
 			Cluster:         upstream.Cluster,
 			ClusterMembers:  members,
 		}
-		if !upstream.ProxyRequests {
+		// Datadog headers carry API keys, browsers never need those since
+		// Datadog upstreams are always read-only
+		if !upstream.ProxyRequests && upstream.Type != config.UpstreamTypeDatadog {
 			maps.Copy(u.Headers, uri.HeadersForBasicAuth(upstream.URI))
 			maps.Copy(u.Headers, upstream.HTTPHeaders)
 		}

@@ -3,6 +3,8 @@ package config
 import (
 	"bytes"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -36,6 +38,7 @@ alertmanager:
   servers:
     - cluster: ""
       name: default
+      type: alertmanager
       uri: http://localhost
       external_uri: http://example.com
       proxy_url: ""
@@ -246,6 +249,9 @@ func TestReadSimpleConfig(t *testing.T) {
 		if am.Name != "single" {
 			t.Errorf("Expect Alertmanager name 'single' got '%s'", am.Name)
 		}
+		if am.Type != UpstreamTypeAlertmanager {
+			t.Errorf("Expect Alertmanager type '%s' got '%s'", UpstreamTypeAlertmanager, am.Type)
+		}
 		if am.Timeout != time.Second*15 {
 			t.Errorf("Expect Alertmanager timeout '%v' got '%v'", time.Second*15, am.Timeout)
 		}
@@ -357,6 +363,77 @@ func TestInvalidCORSCredentials(t *testing.T) {
 	_, err := mockConfigRead()
 	if err == nil {
 		t.Error("Invalid alertmanager.cors.credentials value didn't return any error")
+	}
+}
+
+func TestAlertmanagerServerType(t *testing.T) {
+	type testCaseT struct {
+		name     string
+		server   string
+		err      string
+		typ      string
+		readonly bool
+	}
+
+	testCases := []testCaseT{
+		{
+			name:   "type is not set",
+			server: "uri: http://localhost",
+			typ:    UpstreamTypeAlertmanager,
+		},
+		{
+			name:   "alertmanager type",
+			server: "uri: http://localhost\n      type: alertmanager",
+			typ:    UpstreamTypeAlertmanager,
+		},
+		{
+			name:     "datadog type is always read-only",
+			server:   "uri: https://api.datadoghq.com\n      type: datadog",
+			typ:      UpstreamTypeDatadog,
+			readonly: true,
+		},
+		{
+			name:   "datadog type with proxy enabled",
+			server: "uri: https://api.datadoghq.com\n      type: datadog\n      proxy: true",
+			err:    "proxy mode is not supported for alertmanager 'am' with type 'datadog'",
+		},
+		{
+			name:   "unknown type",
+			server: "uri: http://localhost\n      type: foo",
+			err:    "invalid type value 'foo' for alertmanager 'am', allowed options: alertmanager, datadog",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "karma.yaml")
+			cfg := "alertmanager:\n  servers:\n    - name: am\n      " + tc.server + "\n"
+			if err := os.WriteFile(path, []byte(cfg), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("CONFIG_FILE", path)
+
+			_, err := mockConfigRead()
+			if tc.err != "" {
+				if err == nil || err.Error() != tc.err {
+					t.Errorf("Expected error %q, got %v", tc.err, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error: %s", err)
+			}
+			if len(Config.Alertmanager.Servers) != 1 {
+				t.Fatalf("Expected 1 Alertmanager server, got %d", len(Config.Alertmanager.Servers))
+			}
+			am := Config.Alertmanager.Servers[0]
+			if am.Type != tc.typ {
+				t.Errorf("Expected type %q, got %q", tc.typ, am.Type)
+			}
+			if am.ReadOnly != tc.readonly {
+				t.Errorf("Expected readonly=%v, got %v", tc.readonly, am.ReadOnly)
+			}
+		})
 	}
 }
 

@@ -1,0 +1,14 @@
+# Raises an error if proxy mode is enabled for a Datadog upstream
+! exec karma --config.file karma.yaml
+! stdout .
+cmp stderr stderr.txt
+
+-- stderr.txt --
+level=ERROR msg="Execution failed" error="proxy mode is not supported for alertmanager 'datadog' with type 'datadog'"
+-- karma.yaml --
+alertmanager:
+  servers:
+    - name: datadog
+      type: datadog
+      uri: https://api.datadoghq.eu
+      proxy: true

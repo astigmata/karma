@@ -256,6 +256,7 @@ func TestMarshalJSONTo_MatchesV1(t *testing.T) {
 			val: models.AlertmanagerAPIStatus{
 				Headers:         map[string]string{"X-Custom": "value"},
 				Name:            "am1",
+				Type:            "alertmanager",
 				URI:             "http://am1:9093",
 				PublicURI:       "https://am1.example.com",
 				CORSCredentials: "include",

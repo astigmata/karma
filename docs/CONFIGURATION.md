@@ -187,6 +187,7 @@ alertmanager:
   interval: duration
   servers:
     - name: string
+      type: string
       cluster: string
       uri: string
       external_uri: string
@@ -220,6 +221,8 @@ alertmanager:
 - `name` - name of this Alertmanager server, will be used as a label added to
   every alert in the UI and for filtering alerts using `@alertmanager=NAME`
   filter
+- `type` - type of API served by this server, either `alertmanager` (default)
+  or `datadog`, see [Datadog monitors](#datadog-monitors) below.
 - `cluster` - this option can be set to give
   [Alertmanager clusters](https://prometheus.io/docs/alerting/latest/alertmanager/#high-availability)
   custom names in the UI. If there are multiple alertmanager servers configured
@@ -465,6 +468,62 @@ There is no default for `alertmanager.servers` and it's a required option for
 setting multiple Alertmanager servers. For cases where only a single server
 needs to be configured without a config file see
 [Simplified Configuration](#simplified-configuration).
+
+#### Datadog monitors
+
+Servers with `type: datadog` collect alerts from
+[Datadog monitors](https://docs.datadoghq.com/monitors/) instead of an
+Alertmanager server.
+Example:
+
+```YAML
+alertmanager:
+  servers:
+    - name: datadog
+      type: datadog
+      uri: https://api.datadoghq.eu?monitor_tags=team:sre
+      headers:
+        DD-API-KEY: <api key>
+        DD-APPLICATION-KEY: <application key>
+```
+
+- `uri` - Datadog API address for your
+  [Datadog site](https://docs.datadoghq.com/getting_started/site/), for example
+  `https://api.datadoghq.com` or `https://api.datadoghq.eu`. Query parameters
+  supported by the
+  [monitors API](https://docs.datadoghq.com/api/latest/monitors/#get-all-monitor-details)
+  can be set to filter monitors, for example `monitor_tags`, `tags` or `name`.
+- `headers` - must include an API key and an application key with the
+  `monitors_read` permission. Datadog servers are never proxied and their
+  headers are never sent to the browser.
+- `external_uri` - address of the Datadog web UI used for links to monitors and
+  downtimes, by default it's derived from `uri`, for example
+  `https://api.datadoghq.eu` becomes `https://app.datadoghq.eu`.
+- Datadog servers are always read-only, enabling `proxy` is an error.
+
+Every monitor group in `Alert`, `Warn` or `No Data` state is shown as an alert,
+alerts are grouped by monitor and have:
+
+- `alertname` label set to the monitor name
+- `monitor_id` label set to the monitor ID
+- `severity` label set to `critical` (`Alert`), `warning` (`Warn`) or `nodata`
+  (`No Data`)
+- `priority` label set to `P1` to `P5`, only if the monitor has a priority
+- a label for every `key:value` monitor tag and group tag, group tags take
+  precedence over monitor tags
+- `message` and `query` annotations with the monitor message and query
+- `datadog` receiver
+- source link pointing to the monitor status page
+
+Characters that are not allowed in label names are replaced with `_`, tags
+without a value are ignored and values of monitor tags using the same key are
+joined with `,`.
+
+Active downtimes matching a monitor are shown as silences. A downtime only
+mutes monitor groups that have all the tags it's scoped to, alerts for groups
+missing any of those tags (for example a downtime scoped to `env:prod` on a
+monitor grouped by `host`) stay active in karma.
+Alert history is not available for alerts collected from Datadog.
 
 ### Alert acknowledgement
 

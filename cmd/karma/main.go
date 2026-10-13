@@ -220,6 +220,7 @@ func setupUpstreams() error {
 			s.Cluster,
 			s.Name,
 			s.URI,
+			alertmanager.WithType(s.Type),
 			alertmanager.WithExternalURI(s.ExternalURI),
 			alertmanager.WithRequestTimeout(s.Timeout),
 			alertmanager.WithProxy(s.Proxy),

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.134
+
+### Added
+
+- Alerts can be collected from Datadog monitors by setting `type: datadog` on
+  an Alertmanager server, see [docs](/docs/CONFIGURATION.md#datadog-monitors).
+
 ## v0.133
 
 ### Changed

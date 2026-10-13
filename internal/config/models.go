@@ -23,9 +23,17 @@ type AlertmanagerHealthcheck struct {
 	Filters map[string][]string `yaml:"filters" koanf:"filters"`
 }
 
+const (
+	// UpstreamTypeAlertmanager is the type of upstreams serving Alertmanager API
+	UpstreamTypeAlertmanager = "alertmanager"
+	// UpstreamTypeDatadog is the type of upstreams serving Datadog API
+	UpstreamTypeDatadog = "datadog"
+)
+
 type AlertmanagerConfig struct {
 	Cluster     string
 	Name        string
+	Type        string
 	URI         string
 	ExternalURI string `yaml:"external_uri" koanf:"external_uri"`
 	ProxyURL    string `yaml:"proxy_url" koanf:"proxy_url"`

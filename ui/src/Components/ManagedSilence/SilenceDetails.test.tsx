@@ -89,6 +89,20 @@ describe("<SilenceDetails />", () => {
     );
   });
 
+  it("id links to Datadog downtimes view when alertmanager.type is datadog", () => {
+    const upstreams = generateUpstreams();
+    upstreams.instances[0].type = "datadog";
+    upstreams.instances[0].publicURI = "https://app.datadoghq.com";
+    upstreams.instances[0].readonly = true;
+    alertStore.data.setUpstreams(upstreams);
+    silence.id = "123456";
+    const { container } = renderSilenceDetails();
+    const link = container.querySelector("a");
+    expect(link?.href).toBe(
+      "https://app.datadoghq.com/monitors/downtimes?id=123456",
+    );
+  });
+
   it("clicking on the copy button copies silence ID to the clipboard", async () => {
     const { container } = renderSilenceDetails();
     const button = container.querySelector("span.badge.bg-secondary");

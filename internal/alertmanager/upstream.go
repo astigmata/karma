@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prymitive/karma/internal/config"
 	"github.com/prymitive/karma/internal/filters"
+	"github.com/prymitive/karma/internal/mapper/datadog"
 	"github.com/prymitive/karma/internal/models"
 	"github.com/prymitive/karma/internal/uri"
 )
@@ -30,6 +32,7 @@ func NewAlertmanager(cluster, name, upstreamURI string, opts ...Option) (*Alertm
 		RequestTimeout: time.Second * 10,
 		Cluster:        cluster,
 		Name:           name,
+		Type:           config.UpstreamTypeAlertmanager,
 		lock:           sync.RWMutex{},
 		alertGroups:    []models.AlertGroup{},
 		silences:       map[string]models.Silence{},
@@ -51,6 +54,12 @@ func NewAlertmanager(cluster, name, upstreamURI string, opts ...Option) (*Alertm
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Datadog API and web UI are served from different hosts, use the web UI
+	// for browser links unless it was set explicitly
+	if am.Type == config.UpstreamTypeDatadog && am.ExternalURI == "" {
+		am.ExternalURI = datadog.WebURI(am.URI)
 	}
 
 	var err error
@@ -107,6 +116,26 @@ func GetAlertmanagerByName(name string) *Alertmanager {
 		return am
 	}
 	return nil
+}
+
+// IsDatadogSource returns true if given alert source URI is a link to
+// a monitor of any Datadog upstream
+func IsDatadogSource(source string) bool {
+	for _, am := range upstreams {
+		if am.Type == config.UpstreamTypeDatadog && datadog.IsMonitorURI(am.PublicURI(), source) {
+			return true
+		}
+	}
+	return false
+}
+
+// WithType option can be passed to NewAlertmanager in order to set the type
+// of API served by the upstream, Alertmanager or Datadog
+func WithType(upstreamType string) Option {
+	return func(am *Alertmanager) error {
+		am.Type = upstreamType
+		return nil
+	}
 }
 
 // WithProxy option can be passed to NewAlertmanager in order to enable request

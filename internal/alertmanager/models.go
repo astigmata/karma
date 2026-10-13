@@ -16,6 +16,7 @@ import (
 	"github.com/prymitive/karma/internal/config"
 	"github.com/prymitive/karma/internal/filters"
 	"github.com/prymitive/karma/internal/mapper"
+	"github.com/prymitive/karma/internal/mapper/datadog"
 	"github.com/prymitive/karma/internal/models"
 	"github.com/prymitive/karma/internal/transform"
 	"github.com/prymitive/karma/internal/uri"
@@ -56,6 +57,7 @@ type Alertmanager struct {
 	ExternalURI      string `json:"-"`
 	Cluster          string `json:"cluster"`
 	Name             string `json:"name"`
+	Type             string `json:"type"`
 	lastError        string
 	lastVersionProbe string
 	// CORS credentials
@@ -128,6 +130,12 @@ func (am *Alertmanager) pullSilences(version string) error {
 		slog.Duration("duration", time.Since(start)),
 	)
 
+	am.updateSilences(silences)
+
+	return nil
+}
+
+func (am *Alertmanager) updateSilences(silences []models.Silence) {
 	slog.Info("Detecting ticket links in silences", slog.String("alertmanager", am.Name), slog.Int("silences", len(silences)))
 	silenceMap := make(map[string]models.Silence, len(silences))
 	for _, silence := range silences {
@@ -138,8 +146,6 @@ func (am *Alertmanager) pullSilences(version string) error {
 	am.lock.Lock()
 	am.silences = silenceMap
 	am.lock.Unlock()
-
-	return nil
 }
 
 // InternalURI is the URI of this Alertmanager that will be used for all request made by the UI
@@ -168,16 +174,6 @@ func (am *Alertmanager) pullAlerts(version string) error {
 		return err
 	}
 
-	healthchecks := map[string]HealthCheck{}
-	am.lock.RLock()
-	for name, hc := range am.healthchecks {
-		healthchecks[name] = HealthCheck{
-			filters:  hc.filters,
-			wasFound: false,
-		}
-	}
-	am.lock.RUnlock()
-
 	var groups []models.AlertGroup
 
 	start := time.Now()
@@ -191,6 +187,22 @@ func (am *Alertmanager) pullAlerts(version string) error {
 		slog.Int("groups", len(groups)),
 		slog.Duration("duration", time.Since(start)),
 	)
+
+	am.updateAlerts(groups)
+
+	return nil
+}
+
+func (am *Alertmanager) updateAlerts(groups []models.AlertGroup) {
+	healthchecks := map[string]HealthCheck{}
+	am.lock.RLock()
+	for name, hc := range am.healthchecks {
+		healthchecks[name] = HealthCheck{
+			filters:  hc.filters,
+			wasFound: false,
+		}
+	}
+	am.lock.RUnlock()
 
 	slog.Info("Deduplicating alert groups", slog.String("alertmanager", am.Name), slog.Int("groups", len(groups)))
 	uniqueGroups := map[string]models.AlertGroup{}
@@ -327,14 +339,36 @@ func (am *Alertmanager) pullAlerts(version string) error {
 	am.knownLabels = knownLabels
 	am.healthchecks = healthchecks
 	am.lock.Unlock()
-
-	return nil
 }
 
 // Pull data from upstream Alertmanager instance
 func (am *Alertmanager) Pull() error {
 	am.Metrics.Cycles++
 
+	var err error
+	if am.Type == config.UpstreamTypeDatadog {
+		err = am.pullFromDatadog()
+	} else {
+		err = am.pullFromAlertmanager()
+	}
+	if err != nil {
+		return err
+	}
+
+	am.lock.Lock()
+	am.lastError = ""
+	am.lock.Unlock()
+
+	for name, hc := range am.healthchecks {
+		if !hc.wasFound {
+			am.setError(fmt.Sprintf("Healthcheck filter %q didn't match any alerts", name))
+		}
+	}
+
+	return nil
+}
+
+func (am *Alertmanager) pullFromAlertmanager() error {
 	version := am.probeVersion()
 	am.lock.Lock()
 	am.lastVersionProbe = version
@@ -364,15 +398,30 @@ func (am *Alertmanager) Pull() error {
 		return err
 	}
 
-	am.lock.Lock()
-	am.lastError = ""
-	am.lock.Unlock()
+	return nil
+}
 
-	for name, hc := range am.healthchecks {
-		if !hc.wasFound {
-			am.setError(fmt.Sprintf("Healthcheck filter %q didn't match any alerts", name))
-		}
+// pullFromDatadog collects alerts and silences with a single request cycle,
+// Datadog returns downtimes muting each monitor together with the monitor
+func (am *Alertmanager) pullFromDatadog() error {
+	start := time.Now()
+	groups, silences, err := datadog.Collect(am.URI, am.PublicURI(), am.HTTPHeaders, am.RequestTimeout, am.HTTPTransport)
+	if err != nil {
+		am.clearData()
+		am.setError(err.Error())
+		am.Metrics.Errors[labelValueErrorsAlerts]++
+		return err
 	}
+	slog.Info(
+		"Collected alert groups and silences from Datadog",
+		slog.String("alertmanager", am.Name),
+		slog.Int("groups", len(groups)),
+		slog.Int("silences", len(silences)),
+		slog.Duration("duration", time.Since(start)),
+	)
+
+	am.updateSilences(silences)
+	am.updateAlerts(groups)
 
 	return nil
 }

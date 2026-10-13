@@ -62,6 +62,10 @@ func alertHistory(historyPoller *historyPoller, w http.ResponseWriter, r *http.R
 	errors := []string{}
 
 	for _, source := range payload.Sources {
+		// Datadog monitors are not Prometheus servers, there's nothing to query
+		if alertmanager.IsDatadogSource(source) {
+			continue
+		}
 		results := make(chan historyQueryResult)
 		historyPoller.submit(source, payload.Labels, results)
 		r := <-results

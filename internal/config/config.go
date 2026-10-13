@@ -372,6 +372,19 @@ func (config *configSchema) Read(flags *pflag.FlagSet) (string, error) {
 		if !slices.Contains([]string{"omit", "include", "same-origin"}, config.Alertmanager.Servers[i].CORS.Credentials) {
 			return "", fmt.Errorf("invalid cors.credentials value '%s' for alertmanager '%s', allowed options: omit, include, same-origin", config.Alertmanager.Servers[i].CORS.Credentials, s.Name)
 		}
+		switch s.Type {
+		case "":
+			config.Alertmanager.Servers[i].Type = UpstreamTypeAlertmanager
+		case UpstreamTypeAlertmanager:
+		case UpstreamTypeDatadog:
+			if s.Proxy {
+				return "", fmt.Errorf("proxy mode is not supported for alertmanager '%s' with type '%s'", s.Name, s.Type)
+			}
+			// Datadog downtimes can't be managed via karma
+			config.Alertmanager.Servers[i].ReadOnly = true
+		default:
+			return "", fmt.Errorf("invalid type value '%s' for alertmanager '%s', allowed options: %s, %s", s.Type, s.Name, UpstreamTypeAlertmanager, UpstreamTypeDatadog)
+		}
 	}
 
 	for _, authGroup := range config.Authorization.Groups {
@@ -476,6 +489,7 @@ func (config *configSchema) Read(flags *pflag.FlagSet) (string, error) {
 		config.Alertmanager.Servers = []AlertmanagerConfig{
 			{
 				Name:        config.Alertmanager.Name,
+				Type:        UpstreamTypeAlertmanager,
 				URI:         config.Alertmanager.URI,
 				ExternalURI: config.Alertmanager.ExternalURI,
 				Timeout:     config.Alertmanager.Timeout,
@@ -518,6 +532,7 @@ func (config *configSchema) LogValues() {
 		server := AlertmanagerConfig{
 			Cluster:     s.Cluster,
 			Name:        s.Name,
+			Type:        s.Type,
 			URI:         uri.SanitizeURI(s.URI),
 			ExternalURI: uri.SanitizeURI(s.ExternalURI),
 			ProxyURL:    s.ProxyURL,
