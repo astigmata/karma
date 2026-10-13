@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"cmp"
+	"encoding/json/jsontext"
 	"maps"
 	"net/url"
 	"slices"
@@ -18,14 +19,18 @@ import (
 // Receiver is the receiver name set on all alerts collected from Datadog
 const Receiver = "datadog"
 
-const statusNoData = "No Data"
+const (
+	statusAlert  = "Alert"
+	statusWarn   = "Warn"
+	statusNoData = "No Data"
+)
 
 // monitor group states that are mapped to alerts, with the value of the
 // severity label set on those alerts, other states (OK, Ignored, Skipped and
 // Unknown) are not alerting
 var severities = map[string]string{
-	"Alert":      "critical",
-	"Warn":       "warning",
+	statusAlert:  "critical",
+	statusWarn:   "warning",
 	statusNoData: "nodata",
 }
 
@@ -49,16 +54,21 @@ type downtime struct {
 	ID    int64    `json:"id"`
 }
 
+type monitorOptions struct {
+	Thresholds map[string]jsontext.Value `json:"thresholds"`
+}
+
 type monitor struct {
-	State             monitorState `json:"state"`
-	Priority          *int64       `json:"priority"`
-	Name              string       `json:"name"`
-	Message           string       `json:"message"`
-	Query             string       `json:"query"`
-	OverallState      string       `json:"overall_state"`
-	Tags              []string     `json:"tags"`
-	MatchingDowntimes []downtime   `json:"matching_downtimes"`
-	ID                int64        `json:"id"`
+	State             monitorState   `json:"state"`
+	Options           monitorOptions `json:"options"`
+	Priority          *int64         `json:"priority"`
+	Name              string         `json:"name"`
+	Message           string         `json:"message"`
+	Query             string         `json:"query"`
+	OverallState      string         `json:"overall_state"`
+	Tags              []string       `json:"tags"`
+	MatchingDowntimes []downtime     `json:"matching_downtimes"`
+	ID                int64          `json:"id"`
 }
 
 // mutingDowntime is a downtime muting at least one alert, with IDs of all
@@ -138,7 +148,7 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 	alert := models.Alert{
 		Fingerprint:  strconv.FormatUint(xxhash.Sum64String(monitorID+"/"+groupName), 16),
 		Receiver:     Receiver,
-		Annotations:  m.annotations(),
+		Annotations:  m.annotations(group, groupTags),
 		Labels:       labels.FromMap(ls),
 		StartsAt:     group.startsAt(now),
 		GeneratorURL: monitorURL(webURI, monitorID, groupTags),
@@ -168,10 +178,10 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 	return alert
 }
 
-func (m *monitor) annotations() models.Annotations {
+func (m *monitor) annotations(group monitorGroup, groupTags []string) models.Annotations {
 	annotations := models.Annotations{}
-	if m.Message != "" {
-		annotations = append(annotations, models.NewAnnotation("message", m.Message))
+	if message := renderMessage(m.Message, newTemplateData(m, group, groupTags)); message != "" {
+		annotations = append(annotations, models.NewAnnotation("message", message))
 	}
 	if m.Query != "" {
 		annotations = append(annotations, models.NewAnnotation("query", m.Query))
@@ -180,16 +190,21 @@ func (m *monitor) annotations() models.Annotations {
 	return annotations
 }
 
-func (g monitorGroup) startsAt(now time.Time) time.Time {
-	ts := g.LastTriggeredTs
+// triggeredAt returns the timestamp of the last transition of the group to its
+// current state, 0 if it's unknown
+func (g monitorGroup) triggeredAt() int64 {
 	if g.Status == statusNoData && g.LastNodataTs > 0 {
-		ts = g.LastNodataTs
+		return g.LastNodataTs
 	}
-	if ts <= 0 {
-		// no timestamp reported for this group, use the collection time
-		return now
+	return g.LastTriggeredTs
+}
+
+func (g monitorGroup) startsAt(now time.Time) time.Time {
+	if ts := g.triggeredAt(); ts > 0 {
+		return unixTime(ts)
 	}
-	return unixTime(ts)
+	// no timestamp reported for this group, use the collection time
+	return now
 }
 
 func (d *downtime) silenceID() string {
@@ -282,27 +297,33 @@ func splitTags(s string) []string {
 	return tags
 }
 
-// tagsToLabels converts key:value tags to labels, tags without a value are
-// skipped and values of all tags with the same key are joined
+// tagsToLabels converts key:value tags to labels
 func tagsToLabels(tags []string) map[string]string {
+	return tagValues(tags, labelName)
+}
+
+// tagValues returns values of key:value tags by key, converted with keyFunc.
+// Tags without a value are skipped and values of all tags with the same key
+// are sorted and joined with ",".
+func tagValues(tags []string, keyFunc func(string) string) map[string]string {
 	values := map[string][]string{}
 	for _, tag := range tags {
 		key, value, ok := strings.Cut(tag, ":")
 		if !ok || key == "" || value == "" {
 			continue
 		}
-		name := labelName(key)
-		if !slices.Contains(values[name], value) {
-			values[name] = append(values[name], value)
+		key = keyFunc(key)
+		if !slices.Contains(values[key], value) {
+			values[key] = append(values[key], value)
 		}
 	}
 
-	ls := make(map[string]string, len(values))
-	for name, vals := range values {
+	joined := make(map[string]string, len(values))
+	for key, vals := range values {
 		slices.Sort(vals)
-		ls[name] = strings.Join(vals, ",")
+		joined[key] = strings.Join(vals, ",")
 	}
-	return ls
+	return joined
 }
 
 // labelName converts tag key to a label name that can be used in karma

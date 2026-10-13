@@ -98,8 +98,9 @@ const testMonitors = `[
   {
     "id": 1,
     "name": "CPU usage is high on {{host.name}}",
-    "message": "CPU usage is high @slack-ops",
+    "message": "{{#is_alert}}CPU usage is above {{threshold}} on {{host.name}}{{/is_alert}}{{#is_warning}}CPU usage is above {{warn_threshold}} on {{host.name}}{{/is_warning}}{{#is_no_data}}No data from {{host.name}}{{/is_no_data}} @slack-ops",
     "query": "avg(last_5m):avg:system.cpu.user{*} by {env,host} > 90",
+    "options": {"thresholds": {"critical": 90, "warning": 80}},
     "type": "metric alert",
     "overall_state": "Alert",
     "priority": 2,
@@ -140,6 +141,7 @@ const testMonitors = `[
   {
     "id": 4,
     "name": "Maintenance A",
+    "message": "{{#is_recovery}}Back to normal{{/is_recovery}}",
     "overall_state": "Warn",
     "state": {"groups": {"*": {"name": "*", "status": "Warn", "last_triggered_ts": 1700000400}}},
     "matching_downtimes": [
@@ -166,9 +168,11 @@ func TestMapMonitors(t *testing.T) {
 	now := time.Unix(1700001000, 0).UTC()
 	groups, silences := mapMonitors(monitors, "https://app.datadoghq.com/", now)
 
-	cpuAnnotations := map[string]string{
-		"message": "CPU usage is high @slack-ops",
-		"query":   "avg(last_5m):avg:system.cpu.user{*} by {env,host} > 90",
+	cpuAnnotations := func(message string) map[string]string {
+		return map[string]string{
+			"message": message,
+			"query":   "avg(last_5m):avg:system.cpu.user{*} by {env,host} > 90",
+		}
 	}
 	cpuLabels := func(env, host, severity string) map[string]string {
 		return map[string]string{
@@ -192,7 +196,7 @@ func TestMapMonitors(t *testing.T) {
 				{
 					StartsAt:     time.Unix(1700000200, 0).UTC(),
 					Labels:       cpuLabels("dev", "web3", "nodata"),
-					Annotations:  cpuAnnotations,
+					Annotations:  cpuAnnotations("No data from web3 @slack-ops"),
 					Fingerprint:  fingerprint("1/env:dev,host:web3"),
 					GeneratorURL: "https://app.datadoghq.com/monitors/1?group=env%3Adev%2Chost%3Aweb3",
 					Receiver:     "datadog",
@@ -201,7 +205,7 @@ func TestMapMonitors(t *testing.T) {
 				{
 					StartsAt:     time.Unix(1700000000, 0).UTC(),
 					Labels:       cpuLabels("prod", "web1", "critical"),
-					Annotations:  cpuAnnotations,
+					Annotations:  cpuAnnotations("CPU usage is above 90 on web1 @slack-ops"),
 					Fingerprint:  fingerprint("1/env:prod,host:web1"),
 					GeneratorURL: "https://app.datadoghq.com/monitors/1?group=env%3Aprod%2Chost%3Aweb1",
 					Receiver:     "datadog",
@@ -210,7 +214,7 @@ func TestMapMonitors(t *testing.T) {
 				{
 					StartsAt:     time.Unix(1700000100, 0).UTC(),
 					Labels:       cpuLabels("prod", "web2", "warning"),
-					Annotations:  cpuAnnotations,
+					Annotations:  cpuAnnotations("CPU usage is above 80 on web2 @slack-ops"),
 					Fingerprint:  fingerprint("1/env:prod,host:web2"),
 					GeneratorURL: "https://app.datadoghq.com/monitors/1?group=env%3Aprod%2Chost%3Aweb2",
 					Receiver:     "datadog",

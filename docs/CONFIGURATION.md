@@ -511,13 +511,23 @@ alerts are grouped by monitor and have:
 - `priority` label set to `P1` to `P5`, only if the monitor has a priority
 - a label for every `key:value` monitor tag and group tag, group tags take
   precedence over monitor tags
-- `message` and `query` annotations with the monitor message and query
+- `message` annotation with the monitor message, rendered for the alert
+- `query` annotation with the monitor query
 - `datadog` receiver
 - source link pointing to the monitor status page
 
 Characters that are not allowed in label names are replaced with `_`, tags
 without a value are ignored and values of monitor tags using the same key are
 joined with `,`.
+
+Monitor messages are rendered the way Datadog renders
+[notification templates](https://docs.datadoghq.com/monitors/notify/variables/)
+for the current state of each alert: conditional blocks like `{{#is_alert}}`,
+`{{#is_recovery}}` or `{{#is_match "env.name" "prod"}}` are evaluated, tag
+variables like `{{host.name}}` get the value of the monitor group tag, and
+`{{threshold}}`, `{{warn_threshold}}` or `{{comparator}}` are replaced.
+Variables and conditions that can't be resolved with the monitors API are kept
+as is, like `{{value}}` or tags that are not part of the monitor group.
 
 Active downtimes matching a monitor are shown as silences. A downtime only
 mutes monitor groups that have all the tags it's scoped to, alerts for groups
