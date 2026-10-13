@@ -31,6 +31,10 @@ var thresholdVariables = map[string]string{
 // "avg(last_5m):avg:system.cpu.user{*} > 90"
 var comparatorRegex = regexp.MustCompile(`(>=|<=|==|!=|>|<)\s*[-+]?[0-9.]+(?:[eE][-+]?[0-9]+)?\s*$`)
 
+// matches runs of blank lines, messages are Markdown where they make a single
+// paragraph break
+var blankLinesRegex = regexp.MustCompile(`(\r?\n)(?:[ \t]*\r?\n){2,}`)
+
 type tokenType int
 
 const (
@@ -139,7 +143,8 @@ func renderMessage(message string, data *templateData) string {
 			b.WriteString(t.text)
 		}
 	}
-	return strings.TrimSpace(b.String())
+	// blank lines left around hidden blocks are reduced to a single one
+	return strings.TrimSpace(blankLinesRegex.ReplaceAllString(b.String(), "${1}${1}"))
 }
 
 // tokenize splits a template into text and tags

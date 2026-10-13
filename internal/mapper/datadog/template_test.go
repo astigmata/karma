@@ -153,6 +153,22 @@ func TestRenderMessage(t *testing.T) {
 			expected: "alert\r\nend",
 		},
 		{
+			name:     "blank lines left by hidden blocks are reduced to one",
+			message:  "{{#is_alert}}\nalert\n{{/is_alert}}\n\n{{#is_warning}}\nwarning\n{{/is_warning}}\n\n{{#is_recovery}}\nrecovery\n{{/is_recovery}}\n\n@slack-ops",
+			status:   statusWarn,
+			expected: "warning\n\n@slack-ops",
+		},
+		{
+			name:     "runs of blank lines are reduced to one",
+			message:  "a\n\n\nb\n \t\n  \nc\n  \nd",
+			expected: "a\n\nb\n\nc\n  \nd",
+		},
+		{
+			name:     "runs of blank lines with windows line endings are reduced to one",
+			message:  "a\r\n\r\n \r\n\r\nb",
+			expected: "a\r\n\r\nb",
+		},
+		{
 			name:     "lines with other content are not removed",
 			message:  "{{#is_alert}}alert{{/is_alert}}{{#is_warning}}warning{{/is_warning}}\n{{host.name}} {{#is_alert}}\nend\n{{/is_alert}}",
 			expected: "alert\nweb1 \nend",

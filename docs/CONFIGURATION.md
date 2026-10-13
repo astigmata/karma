@@ -528,6 +528,8 @@ variables like `{{host.name}}` get the value of the monitor group tag, and
 `{{threshold}}`, `{{warn_threshold}}` or `{{comparator}}` are replaced.
 Variables and conditions that can't be resolved with the monitors API are kept
 as is, like `{{value}}` or tags that are not part of the monitor group.
+Consecutive blank lines, like those left around hidden blocks, are reduced to
+one.
 
 Active downtimes matching a monitor are shown as silences. A downtime only
 mutes monitor groups that have all the tags it's scoped to, alerts for groups
