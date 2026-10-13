@@ -312,6 +312,7 @@ describe("<Alert />", () => {
         visible: true,
         isLink: false,
         isAction: false,
+        isHTML: false,
       },
       {
         name: "invisible",
@@ -319,6 +320,7 @@ describe("<Alert />", () => {
         visible: false,
         isLink: false,
         isAction: false,
+        isHTML: false,
       },
     ];
     const group = MockAlertGroup([], [alert], [], [], {});
@@ -338,6 +340,7 @@ describe("<Alert />", () => {
         visible: true,
         isLink: false,
         isAction: false,
+        isHTML: false,
       },
       {
         name: "invisible",
@@ -345,6 +348,7 @@ describe("<Alert />", () => {
         visible: false,
         isLink: false,
         isAction: false,
+        isHTML: false,
       },
     ];
     const group = MockAlertGroup([], [alert], [], [], {});

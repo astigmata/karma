@@ -20,6 +20,7 @@ const MockAnnotation = (
   visible: visible,
   isLink: isLink,
   isAction: isAction,
+  isHTML: false,
 });
 
 const MockAlert = (

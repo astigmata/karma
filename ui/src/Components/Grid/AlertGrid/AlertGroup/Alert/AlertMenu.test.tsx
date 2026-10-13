@@ -214,6 +214,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "linkAction",
@@ -221,6 +222,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: true,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "nonLinkNonAction",
@@ -228,6 +230,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: false,
+          isHTML: false,
         },
       ],
       [{ name: "foo", value: "bar" }],
@@ -243,6 +246,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "linkActionShared",
@@ -250,6 +254,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: true,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "nonLinkNonActionShared",
@@ -257,6 +262,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: false,
+          isHTML: false,
         },
       ],
       [],

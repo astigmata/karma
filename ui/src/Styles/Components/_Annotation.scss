@@ -8,6 +8,74 @@
   white-space: pre-line;
 }
 
+// HTML annotation values, like Datadog monitor messages rendered from Markdown,
+// are spaced less than documents to keep alert cards compact
+.components-grid-annotation-html {
+  p,
+  ul,
+  ol,
+  pre,
+  blockquote,
+  table,
+  hr {
+    margin: 0.25rem 0 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0.5rem 0 0;
+    font-size: 1em;
+    font-weight: bold;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  // the first paragraph follows the annotation name, like plain text values
+  > p:first-child {
+    display: inline;
+  }
+
+  ul,
+  ol {
+    padding-left: 1.25rem;
+  }
+
+  li > p {
+    margin: 0;
+  }
+
+  blockquote {
+    padding-left: 0.5rem;
+    border-left: 0.2rem solid var(--bs-border-color);
+  }
+
+  pre {
+    padding: 0.25rem;
+    white-space: pre-wrap;
+    background-color: var(--bs-secondary-bg);
+    border-radius: var(--bs-border-radius-sm);
+  }
+
+  // tables wider than the alert card can be scrolled
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  th,
+  td {
+    padding: 0 0.25rem;
+    border: var(--bs-border-width) solid var(--bs-border-color);
+  }
+}
+
 .components-grid-annotation-link {
   text-decoration: none;
   color: var(--karma-link-color);

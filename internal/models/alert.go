@@ -281,6 +281,8 @@ func (a *Alert) UpdateFingerprints() {
 		_, _ = h.Write(seps)
 		_, _ = h.WriteString(strconv.FormatBool(a.Visible))
 		_, _ = h.Write(seps)
+		_, _ = h.WriteString(strconv.FormatBool(a.IsHTML))
+		_, _ = h.Write(seps)
 
 	}
 	_, _ = h.WriteString(strconv.FormatUint(labelsHash, 16))

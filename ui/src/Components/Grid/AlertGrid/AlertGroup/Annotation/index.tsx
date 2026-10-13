@@ -15,8 +15,9 @@ const RenderNonLinkAnnotation: FC<{
   value: string;
   visible: boolean;
   allowHTML: boolean;
+  isHTML: boolean;
   afterUpdate: () => void;
-}> = memo(({ name, value, visible, afterUpdate, allowHTML }) => {
+}> = memo(({ name, value, visible, afterUpdate, allowHTML, isHTML }) => {
   const mountRef = useRef<boolean>(false);
 
   const [isVisible, setIsVisible] = useState<boolean>(visible);
@@ -58,7 +59,15 @@ const RenderNonLinkAnnotation: FC<{
                 rel: "noopener noreferrer",
               }}
             >
-              {allowHTML ? (
+              {isHTML ? (
+                // value was sanitized by the backend, like Datadog monitor
+                // messages rendered from Markdown
+                <span
+                  ref={ref}
+                  className="components-grid-annotation-html"
+                  dangerouslySetInnerHTML={{ __html: value }}
+                ></span>
+              ) : allowHTML ? (
                 <span
                   ref={ref}
                   dangerouslySetInnerHTML={{ __html: value }}

@@ -32,6 +32,7 @@ const MockGroup = (
               visible: true,
               isLink: true,
               isAction: false,
+              isHTML: false,
             },
             {
               name: "help",
@@ -39,6 +40,7 @@ const MockGroup = (
               visible: true,
               isLink: false,
               isAction: false,
+              isHTML: false,
             },
             {
               name: "hidden",
@@ -46,6 +48,7 @@ const MockGroup = (
               visible: false,
               isLink: false,
               isAction: false,
+              isHTML: false,
             },
             {
               name: "linkify",
@@ -54,6 +57,7 @@ const MockGroup = (
               visible: true,
               isLink: false,
               isAction: false,
+              isHTML: false,
             },
             {
               name: "action",
@@ -61,6 +65,7 @@ const MockGroup = (
               visible: true,
               isLink: true,
               isAction: true,
+              isHTML: false,
             },
           ]
         : [],
@@ -200,6 +205,7 @@ const MockGrid = (alertStore: AlertStore): void => {
           visible: true,
           isLink: false,
           isAction: false,
+          isHTML: false,
         },
       ];
     }

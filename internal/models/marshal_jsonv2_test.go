@@ -43,6 +43,7 @@ func TestMarshalJSONTo_MatchesV1(t *testing.T) {
 				Visible:  true,
 				IsLink:   false,
 				IsAction: true,
+				IsHTML:   true,
 			},
 		},
 		{
@@ -56,6 +57,7 @@ func TestMarshalJSONTo_MatchesV1(t *testing.T) {
 			val: models.Annotations{
 				{Name: "summary", Value: "test", Visible: true, IsLink: false, IsAction: false},
 				{Name: "url", Value: "https://example.com", Visible: false, IsLink: true, IsAction: false},
+				{Name: "message", Value: "<p>test</p>", Visible: true, IsLink: false, IsAction: false, IsHTML: true},
 			},
 		},
 		{

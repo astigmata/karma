@@ -34,6 +34,7 @@ const renderNonLinkAnnotation = (visible: boolean) => {
       value="some long text"
       visible={visible}
       allowHTML={false}
+      isHTML={false}
       afterUpdate={MockAfterUpdate}
     />,
   );
@@ -46,6 +47,7 @@ const renderNonLinkAnnotationContainingLink = (visible: boolean) => {
       value="some long text with http://example.com link"
       visible={visible}
       allowHTML={false}
+      isHTML={false}
       afterUpdate={MockAfterUpdate}
     />,
   );
@@ -79,6 +81,7 @@ describe("<RenderNonLinkAnnotation />", () => {
         value={"line 1\nline 2"}
         visible={true}
         allowHTML={false}
+        isHTML={false}
         afterUpdate={MockAfterUpdate}
       />,
     );
@@ -93,6 +96,7 @@ describe("<RenderNonLinkAnnotation />", () => {
         value="<b>bold</b>"
         visible={true}
         allowHTML={true}
+        isHTML={false}
         afterUpdate={MockAfterUpdate}
       />,
     );
@@ -100,6 +104,26 @@ describe("<RenderNonLinkAnnotation />", () => {
       container.querySelector(".components-grid-annotation-value"),
     ).toBeNull();
     expect(container.querySelector("b")?.textContent).toBe("bold");
+  });
+
+  it("renders sanitized HTML values when isHTML=true", () => {
+    const { container } = render(
+      <RenderNonLinkAnnotation
+        name="foo"
+        value="<p><strong>bold</strong></p>"
+        visible={true}
+        allowHTML={false}
+        isHTML={true}
+        afterUpdate={MockAfterUpdate}
+      />,
+    );
+    expect(
+      container.querySelector(".components-grid-annotation-value"),
+    ).toBeNull();
+    expect(
+      container.querySelector(".components-grid-annotation-html p strong")
+        ?.textContent,
+    ).toBe("bold");
   });
 
   it("links inside annotation are rendered as a.href", () => {
@@ -135,6 +159,7 @@ describe("<RenderNonLinkAnnotation />", () => {
         value="<div>inside div</div>"
         visible
         allowHTML={false}
+        isHTML={false}
         afterUpdate={MockAfterUpdate}
       />,
     );
@@ -148,6 +173,7 @@ describe("<RenderNonLinkAnnotation />", () => {
         value="<div>inside div</div>"
         visible
         allowHTML={true}
+        isHTML={false}
         afterUpdate={MockAfterUpdate}
       />,
     );

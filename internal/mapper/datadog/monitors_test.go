@@ -170,7 +170,7 @@ func TestMapMonitors(t *testing.T) {
 
 	cpuAnnotations := func(message string) map[string]string {
 		return map[string]string{
-			"message": message,
+			"message": "<p>" + message + "</p>",
 			"query":   "avg(last_5m):avg:system.cpu.user{*} by {env,host} > 90",
 		}
 	}
@@ -322,6 +322,21 @@ func TestMapMonitorsEmpty(t *testing.T) {
 	}
 	if len(silences) != 0 {
 		t.Errorf("Expected no silences, got %d", len(silences))
+	}
+}
+
+func TestMonitorAnnotations(t *testing.T) {
+	m := monitor{
+		Message: "{{#is_alert}}**CPU usage** is high on {{host.name}}{{/is_alert}}",
+		Query:   "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
+	}
+	expected := models.Annotations{
+		{Name: "message", Value: "<p><strong>CPU usage</strong> is high on web1</p>", Visible: true, IsHTML: true},
+		{Name: "query", Value: "avg(last_5m):avg:system.cpu.user{*} by {host} > 90", Visible: true},
+	}
+	got := m.annotations(monitorGroup{Status: statusAlert}, []string{"host:web1"})
+	if diff := cmp.Diff(expected, got); diff != "" {
+		t.Errorf("Incorrect annotations (-want +got):\n%s", diff)
 	}
 }
 

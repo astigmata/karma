@@ -35,6 +35,7 @@ export interface APIAnnotationT {
   visible: boolean;
   isLink: boolean;
   isAction: boolean;
+  isHTML: boolean;
 }
 
 export interface APIAlertmanagerStateT {

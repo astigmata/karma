@@ -19,6 +19,7 @@ type Annotation struct {
 	Visible  bool   `json:"visible"`
 	IsLink   bool   `json:"isLink"`
 	IsAction bool   `json:"isAction"`
+	IsHTML   bool   `json:"isHTML"` // true if Value is sanitized HTML
 }
 
 func (a Annotation) MarshalJSONTo(enc *jsontext.Encoder) error {
@@ -39,6 +40,8 @@ func (a *Annotation) marshalTo(w *jsonWriter) {
 	w.boolean(a.IsLink)
 	w.key("isAction")
 	w.boolean(a.IsAction)
+	w.key("isHTML")
+	w.boolean(a.IsHTML)
 	w.endObject()
 }
 

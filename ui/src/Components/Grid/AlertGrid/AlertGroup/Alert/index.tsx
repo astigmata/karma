@@ -95,6 +95,7 @@ const Alert: FC<{
               value={a.value}
               visible={a.visible}
               allowHTML={alertStore.settings.values.annotationsEnableHTML}
+              isHTML={a.isHTML}
               afterUpdate={afterUpdate}
             />
           ))}

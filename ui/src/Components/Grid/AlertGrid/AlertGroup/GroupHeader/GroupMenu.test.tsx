@@ -254,6 +254,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "linkAction",
@@ -261,6 +262,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: true,
           isAction: true,
+          isHTML: false,
         },
         {
           name: "nonLinkNonAction",
@@ -268,6 +270,7 @@ describe("<MenuContent />", () => {
           visible: true,
           isLink: false,
           isAction: false,
+          isHTML: false,
         },
       ],
       [],

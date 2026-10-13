@@ -180,8 +180,10 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 
 func (m *monitor) annotations(group monitorGroup, groupTags []string) models.Annotations {
 	annotations := models.Annotations{}
-	if message := renderMessage(m.Message, newTemplateData(m, group, groupTags)); message != "" {
-		annotations = append(annotations, models.NewAnnotation("message", message))
+	if message := renderMarkdown(renderMessage(m.Message, newTemplateData(m, group, groupTags))); message != "" {
+		annotation := models.NewAnnotation("message", message)
+		annotation.IsHTML = true
+		annotations = append(annotations, annotation)
 	}
 	if m.Query != "" {
 		annotations = append(annotations, models.NewAnnotation("query", m.Query))
