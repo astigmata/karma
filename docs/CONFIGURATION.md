@@ -549,9 +549,11 @@ as is, like `{{value}}` or tags that are not part of the monitor group.
 Consecutive blank lines, like those left around hidden blocks, are reduced to
 one.
 
-When a monitor has more than one alert, only the message of the alert shown
-first (the most recent one) is expanded, messages of other alerts are
-collapsed and can be expanded by clicking on them. This avoids stacking the
+When a monitor has more than one alert in a group shown in the UI, only the
+message of the alert shown first (the most recent one) is expanded, messages
+of other alerts are collapsed and can be expanded by clicking on them. Groups
+split across grids, like alerts in `Alert` and `Warn` state with a grid using
+`severity` label, have their first message expanded in every grid. This avoids stacking the
 same message, rendered with different tag values, for every monitor group.
 
 Rendered messages are Markdown, karma converts them to HTML so the UI shows

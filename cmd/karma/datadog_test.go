@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -140,5 +141,124 @@ func TestDatadogUpstream(t *testing.T) {
 	}
 	if httpmock.GetTotalCallCount() != calls {
 		t.Errorf("History request for a Datadog source sent %d request(s)", httpmock.GetTotalCallCount()-calls)
+	}
+}
+
+func TestDatadogCollapsedMessages(t *testing.T) {
+	mockConfig(t.Setenv)
+	mockCache()
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	// the most recent alert is a warning, critical alerts are in a separate
+	// grid when grouping by severity and need their first message expanded too
+	uri := "https://api.datadog-karma.test"
+	httpmock.RegisterResponder("GET", uri+"/api/v1/monitor", httpmock.NewStringResponder(200, `[
+  {
+    "id": 1,
+    "name": "Query regression",
+    "message": "{{#is_alert}}Query {{query_signature.name}} is slow{{/is_alert}}{{#is_warning}}Query {{query_signature.name}} is getting slow{{/is_warning}}",
+    "overall_state": "Alert",
+    "state": {"groups": {
+      "query_signature:a": {"status": "Alert", "last_triggered_ts": 1700000100},
+      "query_signature:b": {"status": "Alert", "last_triggered_ts": 1700000200},
+      "query_signature:c": {"status": "Alert", "last_triggered_ts": 1700000300},
+      "query_signature:d": {"status": "Warn", "last_triggered_ts": 1700000400},
+      "query_signature:e": {"status": "Warn", "last_triggered_ts": 1700000500}
+    }}
+  }
+]`))
+
+	am, err := alertmanager.NewAlertmanager("", "datadog", uri, alertmanager.WithType(config.UpstreamTypeDatadog), alertmanager.WithReadOnly(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstreams := alertmanager.GetAlertmanagers()
+	alertmanager.UnregisterAll()
+	defer func() {
+		alertmanager.UnregisterAll()
+		for _, upstream := range upstreams {
+			_ = alertmanager.RegisterAlertmanager(upstream)
+		}
+	}()
+	if err = alertmanager.RegisterAlertmanager(am); err != nil {
+		t.Fatal(err)
+	}
+	pullFromAlertmanager()
+	if am.Error() != "" {
+		t.Fatalf("Datadog upstream returned an error: %s", am.Error())
+	}
+
+	hp := newHistoryPoller(1, time.Second*5)
+	r := testRouter()
+	setupRouter(r, hp)
+	go hp.run(1)
+	defer hp.stop()
+
+	type testCaseT struct {
+		name      string
+		gridLabel string
+		filters   []string
+		expanded  []string
+	}
+	testCases := []testCaseT{
+		{
+			name:     "single grid",
+			filters:  []string{},
+			expanded: []string{"e"},
+		},
+		{
+			name:      "grid by severity",
+			gridLabel: "severity",
+			filters:   []string{},
+			expanded:  []string{"c", "e"},
+		},
+		{
+			name:     "most recent alert filtered out",
+			filters:  []string{"query_signature!=e"},
+			expanded: []string{"d"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, err := json.Marshal(models.AlertsRequest{
+				Filters:           tc.filters,
+				GridLabel:         tc.gridLabel,
+				GridLimits:        map[string]int{},
+				DefaultGroupLimit: 10,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest("POST", "/alerts.json", bytes.NewReader(payload))
+			resp := httptest.NewRecorder()
+			r.ServeHTTP(resp, req)
+			if resp.Code != http.StatusOK {
+				t.Fatalf("POST /alerts.json returned status %d", resp.Code)
+			}
+			ur := models.AlertsResponse{}
+			if err = json.Unmarshal(resp.Body.Bytes(), &ur); err != nil {
+				t.Fatalf("Failed to unmarshal response: %s", err)
+			}
+
+			expanded := []string{}
+			for _, grid := range ur.Grids {
+				for _, ag := range grid.AlertGroups {
+					for _, alert := range ag.Alerts {
+						for _, a := range alert.Annotations {
+							if a.Name == "message" && a.Visible {
+								expanded = append(expanded, alert.Labels.Get("query_signature"))
+							}
+						}
+					}
+				}
+			}
+			slices.Sort(expanded)
+			if !slices.Equal(expanded, tc.expanded) {
+				t.Errorf("Expected expanded messages for %v, got %v", tc.expanded, expanded)
+			}
+		})
 	}
 }

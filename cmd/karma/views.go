@@ -22,6 +22,7 @@ import (
 	"github.com/prymitive/karma/internal/alertmanager"
 	"github.com/prymitive/karma/internal/config"
 	"github.com/prymitive/karma/internal/filters"
+	"github.com/prymitive/karma/internal/mapper/datadog"
 	"github.com/prymitive/karma/internal/models"
 	sliceutils "github.com/prymitive/karma/internal/slices"
 	"github.com/prymitive/karma/internal/transform"
@@ -371,6 +372,9 @@ func alerts(w http.ResponseWriter, r *http.Request) {
 				ag.Hash = ag.ContentFingerprint()
 				totalAlerts := len(ag.Alerts)
 				shared, allLabels := ag.DedupSharedMaps([]string{gridLabel})
+				if alertmanager.IsDatadogSource(ag.Alerts[0].GeneratorURL) {
+					datadog.CollapseMessages(ag.Alerts)
+				}
 				resp.TotalAlerts += totalAlerts
 
 				alertLimit, found := request.GroupLimits[ag.ID]
