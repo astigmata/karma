@@ -19,6 +19,9 @@ import (
 // Receiver is the receiver name set on all alerts collected from Datadog
 const Receiver = "datadog"
 
+// name of the annotation with the link to the monitor status page
+const monitorURLAnnotation = "monitor url"
+
 const (
 	statusAlert  = "Alert"
 	statusWarn   = "Warn"
@@ -213,13 +216,14 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 		ls["priority"] = "P" + strconv.FormatInt(*m.Priority, 10)
 	}
 
+	sourceURL := monitorURL(webURI, monitorID, groupTags)
 	alert := models.Alert{
 		Fingerprint:  strconv.FormatUint(xxhash.Sum64String(monitorID+"/"+groupName), 16),
 		Receiver:     Receiver,
-		Annotations:  m.annotations(group, groupTags),
+		Annotations:  m.annotations(group, groupTags, sourceURL),
 		Labels:       labels.FromMap(ls),
 		StartsAt:     group.startsAt(now),
-		GeneratorURL: monitorURL(webURI, monitorID, groupTags),
+		GeneratorURL: sourceURL,
 		State:        models.AlertStateActive,
 	}
 
@@ -246,8 +250,11 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 	return alert
 }
 
-func (m *monitor) annotations(group monitorGroup, groupTags []string) models.Annotations {
-	annotations := models.Annotations{}
+// annotations returns annotations of the alert for given monitor group,
+// sourceURL is the link to the monitor status page for this group, it's added
+// as a link annotation so the UI shows it on the alert, not only in its menu
+func (m *monitor) annotations(group monitorGroup, groupTags []string, sourceURL string) models.Annotations {
+	annotations := models.Annotations{models.NewAnnotation(monitorURLAnnotation, sourceURL)}
 	if message := renderMarkdown(renderMessage(m.Message, newTemplateData(m, group, groupTags))); message != "" {
 		annotation := models.NewAnnotation("message", message)
 		annotation.IsHTML = true

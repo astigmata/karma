@@ -316,6 +316,14 @@ func TestMapMonitors(t *testing.T) {
 			},
 		},
 	}
+	// every alert links to the monitor status page of its group, the same
+	// page as its source
+	for i := range expectedGroups {
+		for j := range expectedGroups[i].Alerts {
+			a := &expectedGroups[i].Alerts[j]
+			a.Annotations["monitor url"] = a.GeneratorURL
+		}
+	}
 	if diff := cmp.Diff(expectedGroups, toTestGroups(groups)); diff != "" {
 		t.Errorf("Wrong alert groups returned (-want +got):\n%s", diff)
 	}
@@ -470,9 +478,10 @@ func TestMonitorAnnotations(t *testing.T) {
 	}
 	expected := models.Annotations{
 		{Name: "message", Value: "<p><strong>CPU usage</strong> is high on web1</p>", Visible: true, IsHTML: true},
+		{Name: "monitor url", Value: "https://app.datadoghq.com/monitors/1?group=host%3Aweb1", Visible: true, IsLink: true},
 		{Name: "query", Value: "avg(last_5m):avg:system.cpu.user{*} by {host} > 90", Visible: true},
 	}
-	got := m.annotations(monitorGroup{Status: statusAlert}, []string{"host:web1"})
+	got := m.annotations(monitorGroup{Status: statusAlert}, []string{"host:web1"}, "https://app.datadoghq.com/monitors/1?group=host%3Aweb1")
 	if diff := cmp.Diff(expected, got); diff != "" {
 		t.Errorf("Incorrect annotations (-want +got):\n%s", diff)
 	}

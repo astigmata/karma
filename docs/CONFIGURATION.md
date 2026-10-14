@@ -530,6 +530,8 @@ grouped by monitor and have:
   precedence over monitor tags
 - `message` annotation with the monitor message, rendered for the alert and
   formatted from Markdown
+- `monitor url` annotation with a link to the monitor status page, filtered on
+  the alert group, shown as a link on the alert
 - `query` annotation with the monitor query
 - `datadog` receiver
 - source link pointing to the monitor status page
