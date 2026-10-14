@@ -549,6 +549,11 @@ as is, like `{{value}}` or tags that are not part of the monitor group.
 Consecutive blank lines, like those left around hidden blocks, are reduced to
 one.
 
+When a monitor has more than one alert, only the message of the alert shown
+first (the most recent one) is expanded, messages of other alerts are
+collapsed and can be expanded by clicking on them. This avoids stacking the
+same message, rendered with different tag values, for every monitor group.
+
 Rendered messages are Markdown, karma converts them to HTML so the UI shows
 them formatted, with line breaks kept. Only formatting (headings, emphasis,
 lists, quotes, code and tables) and links to `http`, `https` or `mailto` URLs
