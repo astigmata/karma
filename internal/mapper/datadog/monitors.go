@@ -110,6 +110,7 @@ func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.Ale
 		if len(alerts) == 0 {
 			continue
 		}
+		collapseMessages(alerts)
 		groups = append(groups, models.AlertGroup{
 			Receiver: Receiver,
 			Labels:   labels.FromStrings("alertname", m.Name, "monitor_id", m.id()),
@@ -126,6 +127,34 @@ func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.Ale
 	})
 
 	return groups, silences
+}
+
+// collapseMessages keeps the message expanded only on the alert shown first,
+// karma shows the most recent alert of a group first. Messages of other alerts
+// are collapsed, they would otherwise stack the same text for every monitor
+// group, with only tag variables rendered differently, which prevents karma
+// from showing it once as an annotation shared by all alerts.
+func collapseMessages(alerts models.AlertList) {
+	if len(alerts) < 2 {
+		return
+	}
+	first := 0
+	for i := range alerts {
+		if models.CompareAlerts(alerts[i], alerts[first]) < 0 {
+			first = i
+		}
+	}
+	for i := range alerts {
+		if i == first {
+			continue
+		}
+		for j := range alerts[i].Annotations {
+			if alerts[i].Annotations[j].Name == "message" {
+				alerts[i].Annotations[j].Visible = false
+			}
+		}
+		alerts[i].UpdateFingerprints()
+	}
 }
 
 func (m *monitor) id() string {
