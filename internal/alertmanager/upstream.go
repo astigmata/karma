@@ -138,6 +138,15 @@ func WithType(upstreamType string) Option {
 	}
 }
 
+// WithDatadogExcludeMonitorTags option can be passed to NewAlertmanager in
+// order to skip Datadog monitors with any of given tags
+func WithDatadogExcludeMonitorTags(tags []string) Option {
+	return func(am *Alertmanager) error {
+		am.excludeTags = tags
+		return nil
+	}
+}
+
 // WithProxy option can be passed to NewAlertmanager in order to enable request
 // proxying for karma clients
 func WithProxy(proxied bool) Option {

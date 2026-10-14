@@ -82,6 +82,24 @@ type mutingDowntime struct {
 	downtime downtime
 }
 
+// excludeMonitors removes monitors with any of given tags, like children of
+// composite monitors (roles:composite-child) that are only meant to be
+// evaluated as part of the composite. The monitors API can only select
+// monitors with given tags, it can't exclude them. Datadog tags are lower
+// case, but those set in the configuration might not be.
+func excludeMonitors(monitors []monitor, tags []string) []monitor {
+	if len(tags) == 0 {
+		return monitors
+	}
+	return slices.DeleteFunc(monitors, func(m monitor) bool {
+		return slices.ContainsFunc(m.Tags, func(tag string) bool {
+			return slices.ContainsFunc(tags, func(exclude string) bool {
+				return strings.EqualFold(tag, exclude)
+			})
+		})
+	})
+}
+
 func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.AlertGroup, []models.Silence) {
 	groups := []models.AlertGroup{}
 	muting := map[int64]*mutingDowntime{}

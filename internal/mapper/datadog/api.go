@@ -26,7 +26,8 @@ const pageSize = 1000
 // group in Alert, Warn or No Data state to an alert. Active downtimes muting
 // any of those alerts are returned as silences.
 // webURI is the base URI of the Datadog web UI, used for links to monitors.
-func Collect(uri, webURI string, headers map[string]string, timeout time.Duration, httpTransport http.RoundTripper) ([]models.AlertGroup, []models.Silence, error) {
+// Monitors with any of excludeTags tags are skipped.
+func Collect(uri, webURI string, excludeTags []string, headers map[string]string, timeout time.Duration, httpTransport http.RoundTripper) ([]models.AlertGroup, []models.Silence, error) {
 	c, u, err := newHTTPClient(uri, headers, httpTransport)
 	if err != nil {
 		return nil, nil, err
@@ -40,6 +41,7 @@ func Collect(uri, webURI string, headers map[string]string, timeout time.Duratio
 		return nil, nil, err
 	}
 
+	monitors = excludeMonitors(monitors, excludeTags)
 	groups, silences := mapMonitors(monitors, webURI, time.Now())
 	return groups, silences, nil
 }

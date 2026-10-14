@@ -1,6 +1,7 @@
 package datadog
 
 import (
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -364,6 +365,60 @@ func TestMapMonitorsEmpty(t *testing.T) {
 	}
 	if len(silences) != 0 {
 		t.Errorf("Expected no silences, got %d", len(silences))
+	}
+}
+
+func TestExcludeMonitors(t *testing.T) {
+	type testCaseT struct {
+		name     string
+		tags     []string
+		expected []int64
+	}
+
+	monitors := []monitor{
+		{ID: 1, Tags: []string{"team:sre", "roles:composite-child"}},
+		{ID: 2, Tags: []string{"team:sre"}},
+		{ID: 3},
+		{ID: 4, Tags: []string{"roles:composite-child", "roles:db"}},
+	}
+
+	testCases := []testCaseT{
+		{
+			name:     "no tags excluded",
+			expected: []int64{1, 2, 3, 4},
+		},
+		{
+			name:     "monitors with excluded tag",
+			tags:     []string{"roles:composite-child"},
+			expected: []int64{2, 3},
+		},
+		{
+			name:     "tags are case insensitive",
+			tags:     []string{"Roles:Composite-Child"},
+			expected: []int64{2, 3},
+		},
+		{
+			name:     "monitors with any excluded tag",
+			tags:     []string{"roles:db", "team:sre"},
+			expected: []int64{3},
+		},
+		{
+			name:     "tag key alone doesn't match",
+			tags:     []string{"roles"},
+			expected: []int64{1, 2, 3, 4},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := []int64{}
+			for _, m := range excludeMonitors(slices.Clone(monitors), tc.tags) {
+				got = append(got, m.ID)
+			}
+			if diff := cmp.Diff(tc.expected, got); diff != "" {
+				t.Errorf("Wrong monitors (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 

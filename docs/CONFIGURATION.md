@@ -207,6 +207,8 @@ alertmanager:
       healthcheck:
         visible: bool
         filters: map (string: list of strings)
+      datadog:
+        exclude_monitor_tags: list of strings
 ```
 
 - `interval` - how often alerts should be refreshed, a string in
@@ -485,6 +487,9 @@ alertmanager:
       headers:
         DD-API-KEY: <api key>
         DD-APPLICATION-KEY: <application key>
+      datadog:
+        exclude_monitor_tags:
+          - roles:composite-child
 ```
 
 - `uri` - Datadog API address for your
@@ -499,6 +504,14 @@ alertmanager:
 - `external_uri` - address of the Datadog web UI used for links to monitors and
   downtimes, by default it's derived from `uri`, for example
   `https://api.datadoghq.eu` becomes `https://app.datadoghq.eu`.
+- `datadog:exclude_monitor_tags` - list of `key:value` monitor tags, monitors
+  with any of these tags are skipped, compared case insensitively. The monitors
+  API can only select monitors with given tags, use this option to exclude
+  monitors instead, for example children of
+  [composite monitors](https://docs.datadoghq.com/monitors/types/composite/)
+  tagged with `roles:composite-child`. Only monitor tags are compared, group
+  tags are not. Setting this option on a server that isn't `type: datadog` is
+  an error.
 - Datadog servers are always read-only, enabling `proxy` is an error.
 
 Every monitor group in `Alert` or `Warn` state is shown as an alert. Groups in

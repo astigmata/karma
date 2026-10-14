@@ -373,9 +373,11 @@ func (config *configSchema) Read(flags *pflag.FlagSet) (string, error) {
 			return "", fmt.Errorf("invalid cors.credentials value '%s' for alertmanager '%s', allowed options: omit, include, same-origin", config.Alertmanager.Servers[i].CORS.Credentials, s.Name)
 		}
 		switch s.Type {
-		case "":
+		case "", UpstreamTypeAlertmanager:
 			config.Alertmanager.Servers[i].Type = UpstreamTypeAlertmanager
-		case UpstreamTypeAlertmanager:
+			if len(s.Datadog.ExcludeMonitorTags) > 0 {
+				return "", fmt.Errorf("datadog options are only supported for alertmanager '%s' with type '%s'", s.Name, UpstreamTypeDatadog)
+			}
 		case UpstreamTypeDatadog:
 			if s.Proxy {
 				return "", fmt.Errorf("proxy mode is not supported for alertmanager '%s' with type '%s'", s.Name, s.Type)
@@ -543,6 +545,7 @@ func (config *configSchema) LogValues() {
 			Headers:     h,
 			CORS:        s.CORS,
 			Healthcheck: s.Healthcheck,
+			Datadog:     s.Datadog,
 		}
 		servers = append(servers, server)
 	}
