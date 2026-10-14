@@ -23,6 +23,11 @@ type AlertmanagerHealthcheck struct {
 	Filters map[string][]string `yaml:"filters" koanf:"filters"`
 }
 
+// AlertmanagerDatadog holds options only used by upstreams with Datadog type
+type AlertmanagerDatadog struct {
+	ExcludeMonitorTags []string `yaml:"exclude_monitor_tags,omitempty" koanf:"exclude_monitor_tags"`
+}
+
 const (
 	// UpstreamTypeAlertmanager is the type of upstreams serving Alertmanager API
 	UpstreamTypeAlertmanager = "alertmanager"
@@ -44,6 +49,7 @@ type AlertmanagerConfig struct {
 	Headers     map[string]string
 	CORS        AlertmanagerCORS        `yaml:"cors" koanf:"cors"`
 	Healthcheck AlertmanagerHealthcheck `yaml:"healthcheck" koanf:"healthcheck"`
+	Datadog     AlertmanagerDatadog     `yaml:"datadog,omitempty" koanf:"datadog"`
 }
 
 type LinkDetectRules struct {

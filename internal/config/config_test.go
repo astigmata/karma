@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 
@@ -372,6 +373,7 @@ func TestAlertmanagerServerType(t *testing.T) {
 		server   string
 		err      string
 		typ      string
+		exclude  []string
 		readonly bool
 	}
 
@@ -396,6 +398,18 @@ func TestAlertmanagerServerType(t *testing.T) {
 			name:   "datadog type with proxy enabled",
 			server: "uri: https://api.datadoghq.com\n      type: datadog\n      proxy: true",
 			err:    "proxy mode is not supported for alertmanager 'am' with type 'datadog'",
+		},
+		{
+			name:     "datadog type with excluded monitor tags",
+			server:   "uri: https://api.datadoghq.com\n      type: datadog\n      datadog:\n        exclude_monitor_tags: [roles:composite-child]",
+			typ:      UpstreamTypeDatadog,
+			readonly: true,
+			exclude:  []string{"roles:composite-child"},
+		},
+		{
+			name:   "alertmanager type with datadog options",
+			server: "uri: http://localhost\n      datadog:\n        exclude_monitor_tags: [roles:composite-child]",
+			err:    "datadog options are only supported for alertmanager 'am' with type 'datadog'",
 		},
 		{
 			name:   "unknown type",
@@ -432,6 +446,9 @@ func TestAlertmanagerServerType(t *testing.T) {
 			}
 			if am.ReadOnly != tc.readonly {
 				t.Errorf("Expected readonly=%v, got %v", tc.readonly, am.ReadOnly)
+			}
+			if !slices.Equal(am.Datadog.ExcludeMonitorTags, tc.exclude) {
+				t.Errorf("Expected exclude_monitor_tags=%v, got %v", tc.exclude, am.Datadog.ExcludeMonitorTags)
 			}
 		})
 	}

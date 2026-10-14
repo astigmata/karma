@@ -230,6 +230,7 @@ func setupUpstreams() error {
 			alertmanager.WithCORSCredentials(s.CORS.Credentials),
 			alertmanager.WithHealthchecks(s.Healthcheck.Filters),
 			alertmanager.WithHealthchecksVisible(s.Healthcheck.Visible),
+			alertmanager.WithDatadogExcludeMonitorTags(s.Datadog.ExcludeMonitorTags),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create Alertmanager '%s' with URI '%s': %w", s.Name, uri.SanitizeURI(s.URI), err)

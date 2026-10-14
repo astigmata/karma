@@ -45,6 +45,9 @@ level=INFO msg="        credentials: include"
 level=INFO msg="      healthcheck:"
 level=INFO msg="        visible: false"
 level=INFO msg="        filters: {}"
+level=INFO msg="      datadog:"
+level=INFO msg="        exclude_monitor_tags:"
+level=INFO msg="          - roles:composite-child"
 level=INFO msg=alertAcknowledgement:
 level=INFO msg="  enabled: false"
 level=INFO msg="  duration: 15m0s"
@@ -150,3 +153,6 @@ alertmanager:
       headers:
         DD-API-KEY: api-secret
         DD-APPLICATION-KEY: app-secret
+      datadog:
+        exclude_monitor_tags:
+          - roles:composite-child
