@@ -10,6 +10,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/google/go-cmp/cmp"
+	"github.com/prometheus/prometheus/model/labels"
 
 	"github.com/prymitive/karma/internal/models"
 )
@@ -369,28 +370,24 @@ func TestMapMonitorsEmpty(t *testing.T) {
 }
 
 func TestCollapseMessages(t *testing.T) {
-	now := time.Date(2026, time.October, 14, 12, 0, 0, 0, time.UTC)
-	m := monitor{
-		ID:      1,
-		Name:    "query regression",
-		Message: "Query {{query_signature.name}} is slow",
-		Query:   "avg(last_5m):avg:query.latency{*} by {query_signature} > 1",
-		State: monitorState{Groups: map[string]monitorGroup{
-			"query_signature:aaa": {Status: statusAlert, LastTriggeredTs: now.Add(-time.Hour).Unix()},
-			"query_signature:bbb": {Status: statusAlert, LastTriggeredTs: now.Add(-time.Minute).Unix()},
-			"query_signature:ccc": {Status: statusWarn, LastTriggeredTs: now.Add(-time.Hour * 2).Unix()},
-		}},
+	newAlert := func(signature string) models.Alert {
+		return models.Alert{
+			Labels: labels.FromStrings("query_signature", signature),
+			Annotations: models.Annotations{
+				{Name: "message", Value: "Query " + signature + " is slow", Visible: true, IsHTML: true},
+				{Name: "query", Value: "avg:query.latency{*} by {query_signature}", Visible: true},
+			},
+		}
 	}
+	alerts := models.AlertList{newAlert("aaa"), newAlert("bbb"), newAlert("ccc")}
+	stored := alerts[1].Annotations
 
-	groups, _ := mapMonitors([]monitor{m}, "https://app.datadoghq.com", now)
-	if len(groups) != 1 || len(groups[0].Alerts) != 3 {
-		t.Fatalf("Expected 1 group with 3 alerts, got %v", groups)
-	}
+	CollapseMessages(alerts)
 
-	// the most recent alert is shown first, only its message is expanded,
-	// other annotations are not changed
-	expected := map[string]bool{"aaa": false, "bbb": true, "ccc": false}
-	for _, alert := range groups[0].Alerts {
+	// only the message of the first alert is expanded, other annotations are
+	// not changed
+	expected := map[string]bool{"aaa": true, "bbb": false, "ccc": false}
+	for _, alert := range alerts {
 		signature := alert.Labels.Get("query_signature")
 		for _, a := range alert.Annotations {
 			want := a.Name != "message" || expected[signature]
@@ -398,24 +395,17 @@ func TestCollapseMessages(t *testing.T) {
 				t.Errorf("Annotation %s of alert %s has visible=%v, expected %v", a.Name, signature, a.Visible, want)
 			}
 		}
-		fp := alert.ContentFingerprint()
-		alert.UpdateFingerprints()
-		if alert.ContentFingerprint() != fp {
-			t.Errorf("Fingerprint of alert %s wasn't updated after collapsing its message", signature)
-		}
+	}
+	if !stored[0].Visible {
+		t.Error("Annotations of the original alert were modified")
 	}
 }
 
 func TestCollapseMessagesSingleAlert(t *testing.T) {
-	m := monitor{ID: 1, Name: "cpu", Message: "CPU is high", OverallState: statusAlert}
-	groups, _ := mapMonitors([]monitor{m}, "https://app.datadoghq.com", time.Now())
-	if len(groups) != 1 || len(groups[0].Alerts) != 1 {
-		t.Fatalf("Expected 1 group with 1 alert, got %v", groups)
-	}
-	for _, a := range groups[0].Alerts[0].Annotations {
-		if !a.Visible {
-			t.Errorf("Annotation %s of the only alert is collapsed", a.Name)
-		}
+	alerts := models.AlertList{{Annotations: models.Annotations{{Name: "message", Value: "CPU is high", Visible: true}}}}
+	CollapseMessages(alerts)
+	if !alerts[0].Annotations[0].Visible {
+		t.Error("Message of the only alert is collapsed")
 	}
 }
 

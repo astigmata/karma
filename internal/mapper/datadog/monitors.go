@@ -110,7 +110,6 @@ func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.Ale
 		if len(alerts) == 0 {
 			continue
 		}
-		collapseMessages(alerts)
 		groups = append(groups, models.AlertGroup{
 			Receiver: Receiver,
 			Labels:   labels.FromStrings("alertname", m.Name, "monitor_id", m.id()),
@@ -129,31 +128,24 @@ func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.Ale
 	return groups, silences
 }
 
-// collapseMessages keeps the message expanded only on the alert shown first,
-// karma shows the most recent alert of a group first. Messages of other alerts
-// are collapsed, they would otherwise stack the same text for every monitor
-// group, with only tag variables rendered differently, which prevents karma
-// from showing it once as an annotation shared by all alerts.
-func collapseMessages(alerts models.AlertList) {
-	if len(alerts) < 2 {
-		return
-	}
-	first := 0
-	for i := range alerts {
-		if models.CompareAlerts(alerts[i], alerts[first]) < 0 {
-			first = i
-		}
-	}
-	for i := range alerts {
-		if i == first {
-			continue
-		}
-		for j := range alerts[i].Annotations {
-			if alerts[i].Annotations[j].Name == "message" {
+// CollapseMessages keeps the message expanded only on the first of given
+// alerts, sorted the way the UI shows them. Every group of a monitor is
+// mapped to an alert with the same message, rendered with different tag
+// values, which prevents karma from showing it once as an annotation shared
+// by all alerts and stacks the same text for every alert instead. Alerts must
+// be grouped and filtered first, the first alert shown depends on the grid
+// and on filters.
+func CollapseMessages(alerts models.AlertList) {
+	for i := 1; i < len(alerts); i++ {
+		for j, annotation := range alerts[i].Annotations {
+			if annotation.Name == "message" && annotation.Visible {
+				// annotations might be shared with alerts stored by the
+				// upstream, copy them before changing anything
+				alerts[i].Annotations = slices.Clone(alerts[i].Annotations)
 				alerts[i].Annotations[j].Visible = false
+				break
 			}
 		}
-		alerts[i].UpdateFingerprints()
 	}
 }
 
