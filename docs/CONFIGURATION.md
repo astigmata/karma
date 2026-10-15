@@ -208,6 +208,7 @@ alertmanager:
         visible: bool
         filters: map (string: list of strings)
       datadog:
+        entity: string
         exclude_monitor_tags: list of strings
 ```
 
@@ -488,6 +489,7 @@ alertmanager:
         DD-API-KEY: <api key>
         DD-APPLICATION-KEY: <application key>
       datadog:
+        entity: weda
         exclude_monitor_tags:
           - roles:composite-child
 ```
@@ -504,6 +506,11 @@ alertmanager:
 - `external_uri` - address of the Datadog web UI used for links to monitors and
   downtimes, by default it's derived from `uri`, for example
   `https://api.datadoghq.eu` becomes `https://app.datadoghq.eu`.
+- `datadog:entity` - value of the `entity` label set on all alerts and silences
+  collected from this server, defaults to the server `name`. Use one server
+  per Datadog organization, each with its own keys, to collect alerts from
+  multiple organizations and tell them apart with `entity` filters. Setting
+  this option on a server that isn't `type: datadog` is an error.
 - `datadog:exclude_monitor_tags` - list of `key:value` monitor tags, monitors
   with any of these tags are skipped, compared case insensitively. The monitors
   API can only select monitors with given tags, use this option to exclude
@@ -526,6 +533,7 @@ grouped by monitor and have:
 - `severity` label set to `critical` (`Alert`), `warning` (`Warn`) or `nodata`
   (`No Data`)
 - `priority` label set to `P1` to `P5`, only if the monitor has a priority
+- `entity` label set to the `datadog:entity` value of the server
 - `draft` label set to `true`, only if the monitor is a draft, Datadog doesn't
   send notifications for draft monitors, they can be hidden with a
   `draft!=true` filter, for example in `filters:default`
@@ -566,7 +574,8 @@ them formatted, with line breaks kept. Only formatting (headings, emphasis,
 lists, quotes, code and tables) and links to `http`, `https` or `mailto` URLs
 are kept, raw HTML and images are removed.
 
-Active downtimes matching a monitor are shown as silences. A downtime only
+Active downtimes matching a monitor are shown as silences, scoped to the
+`entity` of the server. A downtime only
 mutes monitor groups that have all the tags it's scoped to, alerts for groups
 missing any of those tags (for example a downtime scoped to `env:prod` on a
 monitor grouped by `host`) stay active in karma.

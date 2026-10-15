@@ -61,6 +61,7 @@ type Alertmanager struct {
 	lastError        string
 	lastVersionProbe string
 	excludeTags      []string
+	entity           string
 	// CORS credentials
 	CORSCredentials string `json:"corsCredentials"`
 	// fields for storing pulled data
@@ -406,7 +407,7 @@ func (am *Alertmanager) pullFromAlertmanager() error {
 // Datadog returns downtimes muting each monitor together with the monitor
 func (am *Alertmanager) pullFromDatadog() error {
 	start := time.Now()
-	groups, silences, err := datadog.Collect(am.URI, am.PublicURI(), am.excludeTags, am.HTTPHeaders, am.RequestTimeout, am.HTTPTransport)
+	groups, silences, err := datadog.Collect(am.URI, am.PublicURI(), am.entity, am.excludeTags, am.HTTPHeaders, am.RequestTimeout, am.HTTPTransport)
 	if err != nil {
 		am.clearData()
 		am.setError(err.Error())

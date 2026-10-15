@@ -46,6 +46,7 @@ level=INFO msg="      healthcheck:"
 level=INFO msg="        visible: false"
 level=INFO msg="        filters: {}"
 level=INFO msg="      datadog:"
+level=INFO msg="        entity: datadog"
 level=INFO msg="        exclude_monitor_tags:"
 level=INFO msg="          - roles:composite-child"
 level=INFO msg=alertAcknowledgement:

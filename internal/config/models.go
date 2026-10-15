@@ -25,6 +25,7 @@ type AlertmanagerHealthcheck struct {
 
 // AlertmanagerDatadog holds options only used by upstreams with Datadog type
 type AlertmanagerDatadog struct {
+	Entity             string   `yaml:"entity,omitempty" koanf:"entity"`
 	ExcludeMonitorTags []string `yaml:"exclude_monitor_tags,omitempty" koanf:"exclude_monitor_tags"`
 }
 

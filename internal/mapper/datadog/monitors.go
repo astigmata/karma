@@ -19,6 +19,10 @@ import (
 // Receiver is the receiver name set on all alerts collected from Datadog
 const Receiver = "datadog"
 
+// entityLabel is the name of the label set to the entity, usually the Datadog
+// organization, alerts and silences were collected from
+const entityLabel = "entity"
+
 // name of the annotation with the link to the monitor status page
 const monitorURLAnnotation = "monitor url"
 
@@ -108,26 +112,30 @@ func excludeMonitors(monitors []monitor, tags []string) []monitor {
 	})
 }
 
-func mapMonitors(monitors []monitor, webURI string, now time.Time) ([]models.AlertGroup, []models.Silence) {
+func mapMonitors(monitors []monitor, webURI, entity string, now time.Time) ([]models.AlertGroup, []models.Silence) {
 	groups := []models.AlertGroup{}
 	muting := map[int64]*mutingDowntime{}
 
 	for i := range monitors {
 		m := &monitors[i]
-		alerts := m.alerts(webURI, now, muting)
+		alerts := m.alerts(webURI, entity, now, muting)
 		if len(alerts) == 0 {
 			continue
 		}
+		groupLabels := map[string]string{"alertname": m.Name, "monitor_id": m.id()}
+		if entity != "" {
+			groupLabels[entityLabel] = entity
+		}
 		groups = append(groups, models.AlertGroup{
 			Receiver: Receiver,
-			Labels:   labels.FromStrings("alertname", m.Name, "monitor_id", m.id()),
+			Labels:   labels.FromMap(groupLabels),
 			Alerts:   alerts,
 		})
 	}
 
 	silences := make([]models.Silence, 0, len(muting))
 	for _, md := range muting {
-		silences = append(silences, md.silence())
+		silences = append(silences, md.silence(entity))
 	}
 	slices.SortFunc(silences, func(a, b models.Silence) int {
 		return cmp.Compare(a.ID, b.ID)
@@ -161,12 +169,12 @@ func (m *monitor) id() string {
 	return strconv.FormatInt(m.ID, 10)
 }
 
-func (m *monitor) alerts(webURI string, now time.Time, muting map[int64]*mutingDowntime) models.AlertList {
+func (m *monitor) alerts(webURI, entity string, now time.Time, muting map[int64]*mutingDowntime) models.AlertList {
 	// monitors that are not broken down into groups might not report any
 	// group, use the overall state for those
 	if len(m.State.Groups) == 0 {
 		if m.isAlerting(m.OverallState) {
-			return models.AlertList{m.alert("", m.overallGroup(), webURI, now, muting)}
+			return models.AlertList{m.alert("", m.overallGroup(), webURI, entity, now, muting)}
 		}
 		return nil
 	}
@@ -175,7 +183,7 @@ func (m *monitor) alerts(webURI string, now time.Time, muting map[int64]*mutingD
 	for _, name := range slices.Sorted(maps.Keys(m.State.Groups)) {
 		group := m.State.Groups[name]
 		if m.isAlerting(group.Status) {
-			alerts = append(alerts, m.alert(name, group, webURI, now, muting))
+			alerts = append(alerts, m.alert(name, group, webURI, entity, now, muting))
 		}
 	}
 	return alerts
@@ -206,7 +214,7 @@ func (m *monitor) overallGroup() monitorGroup {
 	return group
 }
 
-func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now time.Time, muting map[int64]*mutingDowntime) models.Alert {
+func (m *monitor) alert(groupName string, group monitorGroup, webURI, entity string, now time.Time, muting map[int64]*mutingDowntime) models.Alert {
 	monitorID := m.id()
 	groupTags := splitTags(groupName)
 
@@ -222,6 +230,9 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 	}
 	if m.DraftStatus == draftStatusDraft {
 		ls["draft"] = "true"
+	}
+	if entity != "" {
+		ls[entityLabel] = entity
 	}
 
 	sourceURL := monitorURL(webURI, monitorID, groupTags)
@@ -331,7 +342,7 @@ func (d *downtime) mutes(groupTags []string) bool {
 	return true
 }
 
-func (md *mutingDowntime) silence() models.Silence {
+func (md *mutingDowntime) silence(entity string) models.Silence {
 	s := models.Silence{
 		ID:        md.downtime.silenceID(),
 		EndsAt:    neverEnds,
@@ -351,8 +362,12 @@ func (md *mutingDowntime) silence() models.Silence {
 	} else {
 		s.Matchers = append(s.Matchers, models.NewSilenceMatcher("monitor_id", strings.Join(monitorIDs, "|"), true, true))
 	}
+	if entity != "" {
+		s.Matchers = append(s.Matchers, models.NewSilenceMatcher(entityLabel, entity, false, true))
+	}
 	for _, scope := range md.downtime.scopes() {
-		if key, value, ok := strings.Cut(scope, ":"); ok && key != "" && value != "" {
+		// the entity label can't be overridden by tags, skip scopes using it
+		if key, value, ok := strings.Cut(scope, ":"); ok && key != "" && value != "" && (entity == "" || labelName(key) != entityLabel) {
 			s.Matchers = append(s.Matchers, models.NewSilenceMatcher(labelName(key), value, false, true))
 		}
 	}
