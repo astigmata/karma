@@ -375,7 +375,7 @@ func (config *configSchema) Read(flags *pflag.FlagSet) (string, error) {
 		switch s.Type {
 		case "", UpstreamTypeAlertmanager:
 			config.Alertmanager.Servers[i].Type = UpstreamTypeAlertmanager
-			if len(s.Datadog.ExcludeMonitorTags) > 0 {
+			if s.Datadog.Entity != "" || len(s.Datadog.ExcludeMonitorTags) > 0 {
 				return "", fmt.Errorf("datadog options are only supported for alertmanager '%s' with type '%s'", s.Name, UpstreamTypeDatadog)
 			}
 		case UpstreamTypeDatadog:
@@ -384,6 +384,10 @@ func (config *configSchema) Read(flags *pflag.FlagSet) (string, error) {
 			}
 			// Datadog downtimes can't be managed via karma
 			config.Alertmanager.Servers[i].ReadOnly = true
+			// alerts from multiple Datadog organizations must be told apart
+			if s.Datadog.Entity == "" {
+				config.Alertmanager.Servers[i].Datadog.Entity = s.Name
+			}
 		default:
 			return "", fmt.Errorf("invalid type value '%s' for alertmanager '%s', allowed options: %s, %s", s.Type, s.Name, UpstreamTypeAlertmanager, UpstreamTypeDatadog)
 		}

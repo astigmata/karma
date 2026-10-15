@@ -42,7 +42,7 @@ func TestCollect(t *testing.T) {
 	defer server.Close()
 
 	headers := map[string]string{"DD-API-KEY": "api-key", "DD-APPLICATION-KEY": "app-key"}
-	groups, silences, err := Collect(server.URL+"/?monitor_tags=team:sre", "https://app.datadoghq.com", nil, headers, time.Second*5, nil)
+	groups, silences, err := Collect(server.URL+"/?monitor_tags=team:sre", "https://app.datadoghq.com", "", nil, headers, time.Second*5, nil)
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
@@ -70,7 +70,7 @@ func TestCollectExcludeTags(t *testing.T) {
 	}))
 	defer server.Close()
 
-	groups, _, err := Collect(server.URL, server.URL, []string{"roles:composite-child"}, nil, time.Second*5, nil)
+	groups, _, err := Collect(server.URL, server.URL, "", []string{"roles:composite-child"}, nil, time.Second*5, nil)
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
@@ -93,7 +93,7 @@ func TestCollectBasicAuth(t *testing.T) {
 	defer server.Close()
 
 	uri := strings.Replace(server.URL, "http://", "http://user:pass@", 1)
-	_, _, err := Collect(uri, server.URL, nil, nil, time.Second*5, http.DefaultTransport)
+	_, _, err := Collect(uri, server.URL, "", nil, nil, time.Second*5, http.DefaultTransport)
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
@@ -121,7 +121,7 @@ func TestCollectPagination(t *testing.T) {
 	}))
 	defer server.Close()
 
-	groups, _, err := Collect(server.URL, server.URL, nil, nil, time.Second*5, nil)
+	groups, _, err := Collect(server.URL, server.URL, "", nil, nil, time.Second*5, nil)
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
@@ -150,7 +150,7 @@ func TestCollectPaginationIgnored(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, _, err := Collect(server.URL, server.URL, nil, nil, time.Second*5, nil)
+	_, _, err := Collect(server.URL, server.URL, "", nil, nil, time.Second*5, nil)
 	if err != nil {
 		t.Fatalf("Collect() returned an error: %s", err)
 	}
@@ -189,7 +189,7 @@ func TestCollectErrors(t *testing.T) {
 			server := httptest.NewServer(tc.handler)
 			defer server.Close()
 
-			groups, silences, err := Collect(server.URL, server.URL, nil, nil, time.Second*5, nil)
+			groups, silences, err := Collect(server.URL, server.URL, "", nil, nil, time.Second*5, nil)
 			if err == nil || !strings.Contains(err.Error(), tc.err) {
 				t.Errorf("Expected error containing %q, got %v", tc.err, err)
 			}
@@ -205,14 +205,14 @@ func TestCollectRequestError(t *testing.T) {
 	uri := server.URL
 	server.Close()
 
-	_, _, err := Collect(uri, uri, nil, nil, time.Second*5, nil)
+	_, _, err := Collect(uri, uri, "", nil, nil, time.Second*5, nil)
 	if err == nil {
 		t.Error("Expected an error when the server is down, got nil")
 	}
 }
 
 func TestCollectInvalidURI(t *testing.T) {
-	_, _, err := Collect("http://[::1", "", nil, nil, time.Second*5, nil)
+	_, _, err := Collect("http://[::1", "", "", nil, nil, time.Second*5, nil)
 	if err == nil {
 		t.Error("Expected an error for an invalid URI, got nil")
 	}

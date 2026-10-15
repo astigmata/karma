@@ -197,7 +197,7 @@ func TestMapMonitors(t *testing.T) {
 	}
 
 	now := time.Unix(1700001000, 0).UTC()
-	groups, silences := mapMonitors(monitors, "https://app.datadoghq.com/", now)
+	groups, silences := mapMonitors(monitors, "https://app.datadoghq.com/", "", now)
 
 	cpuAnnotations := func(message string) map[string]string {
 		return map[string]string{
@@ -369,8 +369,65 @@ func TestMapMonitors(t *testing.T) {
 	}
 }
 
+func TestMapMonitorsEntity(t *testing.T) {
+	var monitors []monitor
+	if err := json.Unmarshal([]byte(`[
+  {
+    "id": 1,
+    "name": "Disk is full",
+    "overall_state": "Alert",
+    "tags": ["entity:other", "team:sre"],
+    "state": {"groups": {"entity:other,host:db1": {"name": "entity:other,host:db1", "status": "Alert", "last_triggered_ts": 1700000000}}},
+    "matching_downtimes": [
+      {"id": 100, "start": 1690000000, "scope": ["entity:other", "host:db1"]}
+    ]
+  }
+]`), &monitors); err != nil {
+		t.Fatalf("failed to decode monitors: %s", err)
+	}
+
+	now := time.Unix(1700001000, 0).UTC()
+	groups, silences := mapMonitors(monitors, "https://app.datadoghq.com/", "weda", now)
+
+	expectedGroups := []testGroup{
+		{
+			Labels:   map[string]string{"alertname": "Disk is full", "monitor_id": "1", "entity": "weda"},
+			Receiver: "datadog",
+			Alerts: []testAlert{
+				{
+					StartsAt:     time.Unix(1700000000, 0).UTC(),
+					Labels:       map[string]string{"alertname": "Disk is full", "monitor_id": "1", "severity": "critical", "entity": "weda", "team": "sre", "host": "db1"},
+					Annotations:  map[string]string{"monitor url": "https://app.datadoghq.com/monitors/1?group=entity%3Aother%2Chost%3Adb1"},
+					Fingerprint:  fingerprint("1/entity:other,host:db1"),
+					GeneratorURL: "https://app.datadoghq.com/monitors/1?group=entity%3Aother%2Chost%3Adb1",
+					Receiver:     "datadog",
+					SilencedBy:   []string{"100"},
+					State:        models.AlertStateSuppressed,
+				},
+			},
+		},
+	}
+	if diff := cmp.Diff(expectedGroups, toTestGroups(groups)); diff != "" {
+		t.Errorf("Wrong alert groups returned (-want +got):\n%s", diff)
+	}
+
+	expectedSilences := []testSilence{
+		{
+			StartsAt:  time.Unix(1690000000, 0).UTC(),
+			EndsAt:    neverEnds,
+			ID:        "100",
+			CreatedBy: "datadog",
+			Comment:   "Datadog downtime",
+			Matchers:  []string{"monitor_id=1", "entity=weda", "host=db1"},
+		},
+	}
+	if diff := cmp.Diff(expectedSilences, toTestSilences(silences)); diff != "" {
+		t.Errorf("Wrong silences returned (-want +got):\n%s", diff)
+	}
+}
+
 func TestMapMonitorsEmpty(t *testing.T) {
-	groups, silences := mapMonitors(nil, "https://app.datadoghq.com", time.Now())
+	groups, silences := mapMonitors(nil, "https://app.datadoghq.com", "", time.Now())
 	if len(groups) != 0 {
 		t.Errorf("Expected no alert groups, got %d", len(groups))
 	}

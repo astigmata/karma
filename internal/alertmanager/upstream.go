@@ -138,6 +138,15 @@ func WithType(upstreamType string) Option {
 	}
 }
 
+// WithDatadogEntity option can be passed to NewAlertmanager in order to set
+// the entity label on all alerts and silences collected from Datadog
+func WithDatadogEntity(entity string) Option {
+	return func(am *Alertmanager) error {
+		am.entity = entity
+		return nil
+	}
+}
+
 // WithDatadogExcludeMonitorTags option can be passed to NewAlertmanager in
 // order to skip Datadog monitors with any of given tags
 func WithDatadogExcludeMonitorTags(tags []string) Option {

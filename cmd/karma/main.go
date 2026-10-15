@@ -231,6 +231,7 @@ func setupUpstreams() error {
 			alertmanager.WithHealthchecks(s.Healthcheck.Filters),
 			alertmanager.WithHealthchecksVisible(s.Healthcheck.Visible),
 			alertmanager.WithDatadogExcludeMonitorTags(s.Datadog.ExcludeMonitorTags),
+			alertmanager.WithDatadogEntity(s.Datadog.Entity),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create Alertmanager '%s' with URI '%s': %w", s.Name, uri.SanitizeURI(s.URI), err)
