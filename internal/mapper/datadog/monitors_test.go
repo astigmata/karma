@@ -106,6 +106,7 @@ const testMonitors = `[
     "type": "metric alert",
     "overall_state": "Alert",
     "priority": 2,
+    "draft_status": "published",
     "tags": ["team:sre", "env:all", "critical", "team:infra", "kube-namespace:monitoring", "severity:high", "1st:yes"],
     "state": {
       "groups": {
@@ -129,7 +130,8 @@ const testMonitors = `[
     "overall_state": "Alert",
     "overall_state_modified": "2023-11-14T22:13:20+00:00",
     "priority": null,
-    "tags": [],
+    "draft_status": "draft",
+    "tags": ["draft:false"],
     "state": {"groups": {}},
     "matching_downtimes": [
       {"id": 200, "start": 1690000000, "end": 1750000000, "scope": ["env:prod"]}
@@ -258,7 +260,7 @@ func TestMapMonitors(t *testing.T) {
 			Alerts: []testAlert{
 				{
 					StartsAt:     time.Unix(1700000000, 0).UTC(),
-					Labels:       map[string]string{"alertname": "Disk is full", "monitor_id": "2", "severity": "critical"},
+					Labels:       map[string]string{"alertname": "Disk is full", "monitor_id": "2", "severity": "critical", "draft": "true"},
 					Annotations:  map[string]string{"query": "avg(last_5m):avg:system.disk.in_use{*} > 0.9"},
 					Fingerprint:  fingerprint("2/"),
 					GeneratorURL: "https://app.datadoghq.com/monitors/2",

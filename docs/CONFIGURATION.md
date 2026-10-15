@@ -526,6 +526,9 @@ grouped by monitor and have:
 - `severity` label set to `critical` (`Alert`), `warning` (`Warn`) or `nodata`
   (`No Data`)
 - `priority` label set to `P1` to `P5`, only if the monitor has a priority
+- `draft` label set to `true`, only if the monitor is a draft, Datadog doesn't
+  send notifications for draft monitors, they can be hidden with a
+  `draft!=true` filter, for example in `filters:default`
 - a label for every `key:value` monitor tag and group tag, group tags take
   precedence over monitor tags
 - `message` annotation with the monitor message, rendered for the alert and

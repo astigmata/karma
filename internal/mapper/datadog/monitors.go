@@ -28,6 +28,10 @@ const (
 	statusNoData = "No Data"
 )
 
+// draft_status of monitors that are still being set up, Datadog doesn't send
+// notifications for them
+const draftStatusDraft = "draft"
+
 // monitor group states that are mapped to alerts, with the value of the
 // severity label set on those alerts, other states (OK, Ignored, Skipped and
 // Unknown) are not alerting. No Data is only alerting for some monitors, see
@@ -73,6 +77,7 @@ type monitor struct {
 	Query                string         `json:"query"`
 	OverallState         string         `json:"overall_state"`
 	OverallStateModified string         `json:"overall_state_modified"`
+	DraftStatus          string         `json:"draft_status"`
 	Tags                 []string       `json:"tags"`
 	MatchingDowntimes    []downtime     `json:"matching_downtimes"`
 	ID                   int64          `json:"id"`
@@ -214,6 +219,9 @@ func (m *monitor) alert(groupName string, group monitorGroup, webURI string, now
 	ls["severity"] = severities[group.Status]
 	if m.Priority != nil {
 		ls["priority"] = "P" + strconv.FormatInt(*m.Priority, 10)
+	}
+	if m.DraftStatus == draftStatusDraft {
+		ls["draft"] = "true"
 	}
 
 	sourceURL := monitorURL(webURI, monitorID, groupTags)
